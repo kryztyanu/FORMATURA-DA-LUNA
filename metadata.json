@@ -1,0 +1,6 @@
+{
+  "name": "Formatura da Luna - Rifa Eletrônica Kit Churrasco",
+  "description": "Rifa eletrônica da Formatura da Luna com temática escolar para crianças de 9 anos. Concorra a um Kit Churrasco completo escolhendo seus números de 00 a 99.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
