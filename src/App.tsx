@@ -3,73 +3,80 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useMemo } from 'react';
-import { Users } from 'lucide-react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { ArrowLeft } from 'lucide-react';
 import { PosterArt } from './components/PosterArt';
 import { NumbersGrid } from './components/NumbersGrid';
 import { StickyFooter } from './components/StickyFooter';
 import { PaymentDialog } from './components/PaymentDialog';
 import { ConfirmationDialog } from './components/ConfirmationDialog';
-import { SoundtrackBar } from './components/SoundtrackBar';
-import { OrganizerDrawer } from './components/OrganizerDrawer';
 import { BetRecord, RAFFLE_CONFIG } from './types/raffle';
+import { schoolSoundtrack } from './utils/audio';
 
 const STORAGE_KEY = 'luna_formatura_rifa_bets_v1';
 
-// Initial realistic demo bets so the stylized "X" is immediately visible on first load
-const INITIAL_DEMO_BETS: BetRecord[] = [
-  {
-    id: 'bet-init-01',
-    name: 'Tia Márcia Silveira',
-    phone: '(71) 99123-4567',
-    numbers: ['07', '21'],
-    totalAmount: 20.0,
-    paidAt: '2026-10-28T14:30:00Z',
-  },
-  {
-    id: 'bet-init-02',
-    name: 'Vovô Carlos Eduardo',
-    phone: '(71) 98877-6655',
-    numbers: ['10', '15', '29'],
-    totalAmount: 30.0,
-    paidAt: '2026-10-28T18:15:00Z',
-  },
-  {
-    id: 'bet-init-03',
-    name: 'Profª Helena (Tia da Escola)',
-    phone: '(71) 99654-3210',
-    numbers: ['33', '77'],
-    totalAmount: 20.0,
-    paidAt: '2026-10-29T10:05:00Z',
-  },
-  {
-    id: 'bet-init-04',
-    name: 'Dinda Carol',
-    phone: '(71) 99234-5678',
-    numbers: ['00', '99'],
-    totalAmount: 20.0,
-    paidAt: '2026-10-29T12:40:00Z',
-  },
-];
+// All 100 buttons start 100% available/eligible, getting an 'X' only when chosen and paid
+const INITIAL_BETS: BetRecord[] = [];
 
 export default function App() {
+  // Screen state: 'poster' (first screen) or 'numbers' (second screen, shown only after clicking ESCOLHER NUMEROS)
+  const [currentScreen, setCurrentScreen] = useState<'poster' | 'numbers'>('poster');
+
   const [selectedNumbers, setSelectedNumbers] = useState<string[]>([]);
   const [bets, setBets] = useState<BetRecord[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved) {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          // If previous mock bets were stored, filter them out so only genuine user bets exist
+          return parsed.filter((b: BetRecord) => !b.id.startsWith('bet-init-'));
+        }
       }
     } catch (e) {
       console.error('Failed to load saved bets', e);
     }
-    return INITIAL_DEMO_BETS;
+    return INITIAL_BETS;
   });
 
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
   const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
-  const [isOrganizerOpen, setIsOrganizerOpen] = useState(false);
   const [lastConfirmedBet, setLastConfirmedBet] = useState<BetRecord | null>(null);
+
+  // Automatic audio start on app launch (volume 30%) with user gesture fallback for browser policy
+  const audioStartedRef = useRef(false);
+
+  useEffect(() => {
+    const tryAutoplay = async () => {
+      if (audioStartedRef.current) return;
+      schoolSoundtrack.setVolume(0.3); // Exactly 30% volume
+      const success = await schoolSoundtrack.start();
+      if (success) {
+        audioStartedRef.current = true;
+      }
+    };
+
+    tryAutoplay();
+
+    // Browser autoplay policy handler: starts seamlessly on the first tap/click if blocked initially
+    const handleFirstGesture = async () => {
+      if (!audioStartedRef.current) {
+        schoolSoundtrack.setVolume(0.3);
+        const ok = await schoolSoundtrack.start();
+        if (ok) audioStartedRef.current = true;
+      }
+    };
+
+    window.addEventListener('click', handleFirstGesture, { passive: true });
+    window.addEventListener('touchstart', handleFirstGesture, { passive: true });
+    window.addEventListener('keydown', handleFirstGesture, { passive: true });
+
+    return () => {
+      window.removeEventListener('click', handleFirstGesture);
+      window.removeEventListener('touchstart', handleFirstGesture);
+      window.removeEventListener('keydown', handleFirstGesture);
+    };
+  }, []);
 
   // Sync bets to localStorage whenever changed
   useEffect(() => {
@@ -91,8 +98,6 @@ export default function App() {
     return map;
   }, [bets]);
 
-  const availableNumbersCount = 100 - paidNumbersMap.size;
-
   // Toggle selection for a single number button
   const handleToggleNumber = (num: string) => {
     if (paidNumbersMap.has(num)) return; // Inaccessible
@@ -101,18 +106,24 @@ export default function App() {
     );
   };
 
-  const handleScrollToNumbers = () => {
-    const el = document.getElementById('painel-numeros');
-    if (el) {
-      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  // Called when user clicks "ESCOLHER NUMEROS" on the first screen
+  const handleChooseNumbers = () => {
+    // Ensure music is playing if it was waiting on gesture
+    if (!audioStartedRef.current) {
+      schoolSoundtrack.start();
+      audioStartedRef.current = true;
     }
+    setCurrentScreen('numbers');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleBackToPoster = () => {
+    setCurrentScreen('poster');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleOpenPayment = () => {
-    if (selectedNumbers.length === 0) {
-      handleScrollToNumbers();
-      return;
-    }
+    if (selectedNumbers.length === 0) return;
     setIsPaymentOpen(true);
   };
 
@@ -128,7 +139,6 @@ export default function App() {
       paidAt: new Date().toISOString(),
     };
 
-    // Save bet and clear user selection
     setBets((prev) => [newBet, ...prev]);
     setLastConfirmedBet(newBet);
     setSelectedNumbers([]);
@@ -136,90 +146,49 @@ export default function App() {
     setIsConfirmationOpen(true);
   };
 
-  const handleClearAllBets = () => {
-    if (window.confirm('Tem certeza de que deseja limpar todas as apostas salvas?')) {
-      setBets([]);
-      setSelectedNumbers([]);
-    }
-  };
-
-  const handleResetToDemo = () => {
-    setBets(INITIAL_DEMO_BETS);
-    setSelectedNumbers([]);
-  };
-
   return (
-    <div className="min-h-screen bg-notebook-pattern pb-28 text-slate-800">
-      {/* 3-Zone Top Bar Contract */}
-      <header className="sticky top-0 z-30 bg-white/90 backdrop-blur-md border-b border-amber-200/80 px-4 sm:px-8 py-3">
-        <div className="max-w-5xl mx-auto flex items-center justify-between gap-8">
-          {/* Zone 1: Single text element wordmark */}
-          <a
-            href="/"
-            className="text-lg sm:text-xl font-extrabold tracking-tight text-amber-950 font-display whitespace-nowrap shrink-0 flex items-center gap-2"
-          >
-            <span>Formatura da Luna</span>
-            <span className="text-amber-500 text-xs hidden sm:inline-block">🎓 9 Anos</span>
-          </a>
+    <div className="min-h-screen bg-notebook-pattern pb-28 text-slate-800 flex flex-col items-center justify-start p-3 sm:p-5">
+      {/* SCREEN 1: First screen showing only the authentic raffle art */}
+      {currentScreen === 'poster' && (
+        <main className="w-full max-w-md mx-auto flex flex-col items-center justify-center my-auto">
+          <PosterArt onChooseNumbersClick={handleChooseNumbers} />
+        </main>
+      )}
 
-          {/* Zone 2: Concise navigation links */}
-          <nav className="hidden md:flex items-center gap-6 text-xs font-semibold text-slate-600">
-            <a href="#arte-rifa" className="hover:text-emerald-700 transition-colors whitespace-nowrap shrink-0">
-              Arte da Rifa
-            </a>
-            <a href="#painel-numeros" className="hover:text-emerald-700 transition-colors whitespace-nowrap shrink-0">
-              Escolher Números ({availableNumbersCount})
-            </a>
-            <a href="#premio" className="hover:text-emerald-700 transition-colors whitespace-nowrap shrink-0">
-              Kit Churrasco
-            </a>
-            <a href="#regulamento" className="hover:text-emerald-700 transition-colors whitespace-nowrap shrink-0">
-              Sorteio 29/11/2026
-            </a>
-          </nav>
-
-          {/* Zone 3: 1 primary action */}
-          <div className="flex items-center gap-2.5 shrink-0">
+      {/* SCREEN 2: Second screen showing ONLY the 100 number buttons for selection */}
+      {currentScreen === 'numbers' && (
+        <main className="w-full max-w-3xl mx-auto flex flex-col items-center pt-2">
+          {/* Subtle back navigation button to return to the poster art if desired */}
+          <div className="w-full flex justify-start mb-3 px-2">
             <button
-              onClick={() => setIsOrganizerOpen(true)}
+              onClick={handleBackToPoster}
               type="button"
-              className="px-3.5 py-1.5 text-xs font-bold text-slate-800 bg-amber-100 hover:bg-amber-200 rounded-xl border border-amber-300 transition-colors whitespace-nowrap shrink-0 flex items-center gap-1.5 cursor-pointer"
+              className="px-3.5 py-1.5 rounded-xl bg-white/90 hover:bg-white text-slate-700 hover:text-slate-900 border border-slate-300 shadow-sm text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors"
             >
-              <Users className="w-3.5 h-3.5 text-amber-700" />
-              <span>Painel Gestão ({paidNumbersMap.size}/100)</span>
+              <ArrowLeft className="w-3.5 h-3.5" />
+              <span>Ver Arte da Rifa</span>
             </button>
           </div>
-        </div>
-      </header>
 
-      {/* Main Container */}
-      <main className="max-w-4xl mx-auto px-4 sm:px-6 pt-5 space-y-6">
-        {/* Background School Soundtrack Player */}
-        <SoundtrackBar />
-
-        {/* Section 1: Official Raffle Poster (9,144cm x 16,256cm / 9:16) */}
-        <section id="arte-rifa" className="w-full flex justify-center">
-          <PosterArt onChooseNumbersClick={handleScrollToNumbers} />
-        </section>
-
-        {/* Section 2: Sequential Numbers Panel (100 buttons: 00 to 99 ONLY) */}
-        <section className="w-full pt-2">
+          {/* Contains ONLY the 100 buttons with their respective numbers (00 to 99) */}
           <NumbersGrid
             selectedNumbers={selectedNumbers}
             paidNumbersMap={paidNumbersMap}
             onToggleNumber={handleToggleNumber}
           />
-        </section>
-      </main>
+        </main>
+      )}
 
-      {/* Sticky Bottom Footer with PAGAR Button */}
-      <StickyFooter
-        selectedNumbers={selectedNumbers}
-        onOpenPaymentDialog={handleOpenPayment}
-        onScrollToNumbers={handleScrollToNumbers}
-      />
+      {/* Sticky Bottom Footer with PAGAR Button (active on the numbers screen) */}
+      {currentScreen === 'numbers' && (
+        <StickyFooter
+          selectedNumbers={selectedNumbers}
+          onOpenPaymentDialog={handleOpenPayment}
+          onScrollToNumbers={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+        />
+      )}
 
-      {/* Payment Dialog */}
+      {/* Payment Dialog with NOME, WHATSAPP, PIX 71996953785 and centered ATENÇÃO warning */}
       <PaymentDialog
         isOpen={isPaymentOpen}
         onClose={() => setIsPaymentOpen(false)}
@@ -232,15 +201,6 @@ export default function App() {
         isOpen={isConfirmationOpen}
         onClose={() => setIsConfirmationOpen(false)}
         bet={lastConfirmedBet}
-      />
-
-      {/* Organizer Drawer / Storage Management */}
-      <OrganizerDrawer
-        isOpen={isOrganizerOpen}
-        onClose={() => setIsOrganizerOpen(false)}
-        bets={bets}
-        onClearAll={handleClearAllBets}
-        onResetToDemo={handleResetToDemo}
       />
     </div>
   );

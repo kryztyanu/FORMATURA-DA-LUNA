@@ -1,5 +1,6 @@
 /**
  * Web Audio API synthesizer for the school-themed background soundtrack
+ * Joyful, dynamic, upbeat children's school graduation melody.
  * Initial volume set to exactly 30% (0.30) as required.
  */
 
@@ -12,32 +13,39 @@ class SchoolSoundtrackManager {
   private volume: number = 0.3; // Exactly 30% default volume
   private listeners: Set<(playing: boolean, vol: number) => void> = new Set();
 
-  // Joyful, school-bell / marimba pentatonic notes (in Hz)
+  // Vibrant, cheerful pentatonic + diatonic frequencies (Glockenspiel, Marimba, Music Box)
   private readonly notes: number[] = [
-    261.63, // C4
-    293.66, // D4
-    329.63, // E4
-    392.00, // G4
-    440.00, // A4
-    523.25, // C5
-    587.33, // D5
-    659.25, // E5
+    261.63, // 0: C4
+    293.66, // 1: D4
+    329.63, // 2: E4
+    349.23, // 3: F4
+    392.00, // 4: G4
+    440.00, // 5: A4
+    493.88, // 6: B4
+    523.25, // 7: C5
+    587.33, // 8: D5
+    659.25, // 9: E5
+    698.46, // 10: F5
+    783.99, // 11: G5
+    880.00, // 12: A5
   ];
 
-  // Cheerful elementary school melody pattern (steps)
+  // Upbeat, lively and dynamic children's celebration theme (32-step cheerful school motif)
   private readonly melodyPattern: number[] = [
-    0, 2, 3, 5, 4, 3, 2, 0,
-    1, 3, 4, 6, 5, 4, 3, 1,
-    2, 4, 5, 7, 6, 5, 4, 2,
-    3, 5, 4, 2, 1, 2, 0, -1,
+    // Phrase 1: Joyful call & response
+    7,  9,  11, 7,  9,  7,  4,  2,
+    7,  9,  11, 12, 11, 9,  7,  4,
+    // Phrase 2: Bouncy, energetic celebration
+    5,  7,  9,  11, 9,  7,  5,  4,
+    2,  4,  7,  9,  7,  4,  7,  -1,
   ];
 
-  // Cheerful bassline harmony
+  // Bright, bouncy bass root movement (staccato pizzicato style)
   private readonly bassPattern: number[] = [
     130.81, 130.81, 196.00, 196.00, // C3, G3
-    164.81, 164.81, 220.00, 220.00, // E3, A3
     174.61, 174.61, 220.00, 220.00, // F3, A3
-    196.00, 196.00, 130.81, 130.81, // G3, C3
+    164.81, 164.81, 196.00, 196.00, // E3, G3
+    196.00, 246.94, 261.63, 261.63, // G3, B3, C4
   ];
 
   private initContext() {
@@ -93,14 +101,14 @@ class SchoolSoundtrackManager {
         window.clearInterval(this.timerId);
       }
 
-      // Step tempo: ~160ms per note (joyful school tempo)
+      // Upbeat tempo: 155ms per step (lively, dynamic tempo ~96-100 BPM swing)
       this.timerId = window.setInterval(() => {
         this.playMelodyStep();
-      }, 180);
+      }, 155);
 
       return true;
     } catch (e) {
-      console.warn('Audio autoplay restrictions:', e);
+      console.warn('Audio autoplay restriction handled:', e);
       this.isPlaying = false;
       this.notify();
       return false;
@@ -133,28 +141,46 @@ class SchoolSoundtrackManager {
     const noteIdx = this.melodyPattern[step];
     const now = this.ctx.currentTime;
 
-    // Play melody marimba / glockenspiel note
+    // Play melody: bright glockenspiel / marimba with bell overtones
     if (noteIdx >= 0 && noteIdx < this.notes.length) {
+      const freq = this.notes[noteIdx];
+
+      // Primary tone (triangle for warm roundness)
       const osc = this.ctx.createOscillator();
       const noteGain = this.ctx.createGain();
 
-      // Sine + soft triangle creates warm wooden toy / marimba timbre
-      osc.type = step % 4 === 0 ? 'sine' : 'triangle';
-      osc.frequency.setValueAtTime(this.notes[noteIdx], now);
+      osc.type = 'triangle';
+      osc.frequency.setValueAtTime(freq, now);
 
-      // Fast percussive attack, sweet bell decay
       noteGain.gain.setValueAtTime(0.001, now);
-      noteGain.gain.linearRampToValueAtTime(0.22, now + 0.02);
-      noteGain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+      noteGain.gain.linearRampToValueAtTime(0.24, now + 0.015);
+      noteGain.gain.exponentialRampToValueAtTime(0.001, now + 0.32);
 
       osc.connect(noteGain);
       noteGain.connect(this.masterGain);
 
       osc.start(now);
-      osc.stop(now + 0.4);
+      osc.stop(now + 0.35);
+
+      // Bell chime overtone for festive children's celebration atmosphere
+      const overtoneOsc = this.ctx.createOscillator();
+      const overtoneGain = this.ctx.createGain();
+
+      overtoneOsc.type = 'sine';
+      overtoneOsc.frequency.setValueAtTime(freq * 2, now); // Octave overtone
+
+      overtoneGain.gain.setValueAtTime(0.001, now);
+      overtoneGain.gain.linearRampToValueAtTime(0.08, now + 0.01);
+      overtoneGain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+
+      overtoneOsc.connect(overtoneGain);
+      overtoneGain.connect(this.masterGain);
+
+      overtoneOsc.start(now);
+      overtoneOsc.stop(now + 0.22);
     }
 
-    // Play bass / accompaniment note every 2 steps
+    // Play rhythmic accompaniment bass / cute school toy click
     if (step % 2 === 0) {
       const bassIdx = Math.floor(step / 2) % this.bassPattern.length;
       const bassOsc = this.ctx.createOscillator();
@@ -164,14 +190,33 @@ class SchoolSoundtrackManager {
       bassOsc.frequency.setValueAtTime(this.bassPattern[bassIdx], now);
 
       bassGain.gain.setValueAtTime(0.001, now);
-      bassGain.gain.linearRampToValueAtTime(0.12, now + 0.03);
-      bassGain.gain.exponentialRampToValueAtTime(0.001, now + 0.5);
+      bassGain.gain.linearRampToValueAtTime(0.14, now + 0.02);
+      bassGain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
 
       bassOsc.connect(bassGain);
       bassGain.connect(this.masterGain);
 
       bassOsc.start(now);
-      bassOsc.stop(now + 0.55);
+      bassOsc.stop(now + 0.38);
+    }
+
+    // Gentle percussion tap every 4 steps (woodblock click)
+    if (step % 4 === 0) {
+      const clickOsc = this.ctx.createOscillator();
+      const clickGain = this.ctx.createGain();
+
+      clickOsc.type = 'triangle';
+      clickOsc.frequency.setValueAtTime(987.77, now); // B5 woodblock pitch
+      clickOsc.frequency.exponentialRampToValueAtTime(300, now + 0.04);
+
+      clickGain.gain.setValueAtTime(0.04, now);
+      clickGain.gain.exponentialRampToValueAtTime(0.001, now + 0.05);
+
+      clickOsc.connect(clickGain);
+      clickGain.connect(this.masterGain);
+
+      clickOsc.start(now);
+      clickOsc.stop(now + 0.06);
     }
 
     this.currentStep++;
@@ -187,8 +232,8 @@ class SchoolSoundtrackManager {
       const gain = this.ctx.createGain();
 
       osc.type = 'triangle';
-      osc.frequency.setValueAtTime(isSelected ? 523.25 : 392.00, now);
-      osc.frequency.exponentialRampToValueAtTime(isSelected ? 659.25 : 329.63, now + 0.08);
+      osc.frequency.setValueAtTime(isSelected ? 587.33 : 440.00, now);
+      osc.frequency.exponentialRampToValueAtTime(isSelected ? 783.99 : 349.23, now + 0.08);
 
       gain.gain.setValueAtTime(0.15, now);
       gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
@@ -203,17 +248,17 @@ class SchoolSoundtrackManager {
     }
   }
 
-  // Sound effect for successful payment
+  // Sound effect for celebrations
   public playCelebrationChime() {
     try {
       this.initContext();
       if (!this.ctx || !this.masterGain) return;
-      const notes = [392.00, 523.25, 659.25, 783.99, 1046.50];
+      const notes = [440.00, 554.37, 659.25, 880.00, 1108.73];
       const now = this.ctx.currentTime;
 
       notes.forEach((freq, idx) => {
         if (!this.ctx || !this.masterGain) return;
-        const noteTime = now + idx * 0.09;
+        const noteTime = now + idx * 0.08;
         const osc = this.ctx.createOscillator();
         const gain = this.ctx.createGain();
 

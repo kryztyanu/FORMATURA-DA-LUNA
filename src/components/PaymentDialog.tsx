@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Copy, Check, AlertTriangle, QrCode, Smartphone, User } from 'lucide-react';
+import { X, Copy, Check, AlertTriangle, QrCode, Smartphone, User, ArrowRight, ShieldCheck } from 'lucide-react';
 import { RAFFLE_CONFIG, formatCurrencyBRL, formatPhoneMask } from '../types/raffle';
 import { generatePixCopiaECola, generateQrCodeDataUrl } from '../utils/pix';
 
@@ -7,19 +7,21 @@ interface PaymentDialogProps {
   isOpen: boolean;
   onClose: () => void;
   selectedNumbers: string[];
-  onConfirmPayment?: (name: string, phone: string) => void;
+  onConfirmPayment: (name: string, phone: string) => void;
 }
 
 export const PaymentDialog: React.FC<PaymentDialogProps> = ({
   isOpen,
   onClose,
   selectedNumbers,
+  onConfirmPayment,
 }) => {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [copiedKey, setCopiedKey] = useState(false);
   const [copiedPayload, setCopiedPayload] = useState(false);
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('');
+  const [errorMessage, setErrorMessage] = useState('');
 
   const totalAmount = selectedNumbers.length * RAFFLE_CONFIG.pricePerNumber;
   const pixPayload = generatePixCopiaECola(
@@ -34,6 +36,7 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
       generateQrCodeDataUrl(pixPayload).then((dataUrl) => {
         setQrCodeDataUrl(dataUrl);
       });
+      setErrorMessage('');
     }
   }, [isOpen, pixPayload]);
 
@@ -54,10 +57,28 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const masked = formatPhoneMask(e.target.value);
     setPhone(masked);
+    if (errorMessage) setErrorMessage('');
   };
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setName(e.target.value);
+    if (errorMessage) setErrorMessage('');
+  };
+
+  const handleAdvanceToReceipt = () => {
+    const cleanName = name.trim();
+    const cleanDigits = phone.replace(/\D/g, '');
+
+    if (!cleanName) {
+      setErrorMessage('Por favor, digite seu NOME.');
+      return;
+    }
+    if (cleanDigits.length < 10) {
+      setErrorMessage('Por favor, digite seu WHATSAPP com DDD.');
+      return;
+    }
+
+    onConfirmPayment(cleanName, phone);
   };
 
   return (
@@ -75,7 +96,7 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
               Pagamento PIX • Formatura da Luna
             </div>
             <h3 id="payment-dialog-title" className="text-xl sm:text-2xl font-extrabold font-display">
-              Chave PIX e Instruções
+              Chave PIX e Dados do Apostador
             </h3>
           </div>
           <button
@@ -115,6 +136,7 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
               <label htmlFor="field-nome" className="block text-xs font-bold text-slate-800 uppercase tracking-wide mb-1 flex items-center gap-1.5">
                 <User className="w-4 h-4 text-emerald-600" />
                 <span>NOME</span>
+                <span className="text-rose-500">*</span>
               </label>
               <input
                 id="field-nome"
@@ -132,6 +154,7 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
               <label htmlFor="field-whatsapp" className="block text-xs font-bold text-slate-800 uppercase tracking-wide mb-1 flex items-center gap-1.5">
                 <Smartphone className="w-4 h-4 text-emerald-600" />
                 <span>WHATSAPP</span>
+                <span className="text-rose-500">*</span>
               </label>
               <input
                 id="field-whatsapp"
@@ -143,6 +166,12 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
                 className="w-full px-3.5 py-2.5 rounded-xl text-sm bg-slate-50 border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
             </div>
+
+            {errorMessage && (
+              <div className="text-xs text-rose-600 font-bold bg-rose-50 border border-rose-200 p-2.5 rounded-xl text-center">
+                {errorMessage}
+              </div>
+            )}
           </div>
 
           {/* PIX Key Section: EXACT REQUIREMENT 71996953785 with copy option */}
@@ -196,9 +225,9 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
                   />
                 </div>
                 <div className="text-xs text-slate-600 space-y-1.5 text-center sm:text-left">
-                  <div className="font-semibold text-slate-800">Pague direto no seu app bancário:</div>
+                  <div className="font-semibold text-slate-800">Pague no seu app bancário:</div>
                   <p className="text-[11px] text-slate-500">
-                    Abra o app do seu banco, escolha PIX e aponte a câmera para o QR Code ou cole a chave celular.
+                    Copie a chave PIX ou escaneie o QR Code. Ao concluir o pagamento no seu banco, gere o comprovante WhatsApp abaixo.
                   </p>
                   <button
                     type="button"
@@ -226,15 +255,27 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
             </div>
           </div>
 
-          {/* Action button centered */}
-          <div className="pt-2 flex justify-center">
+          {/* Action buttons: Advance to receipt and WhatsApp triggers */}
+          <div className="space-y-2 pt-1">
             <button
               type="button"
-              onClick={onClose}
-              className="w-full max-w-xs py-3 px-6 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 font-semibold text-sm transition-colors cursor-pointer text-center mx-auto"
+              onClick={handleAdvanceToReceipt}
+              className="w-full py-3.5 px-6 rounded-2xl bg-gradient-to-r from-emerald-600 via-green-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 text-white font-black text-sm sm:text-base font-display tracking-wide uppercase shadow-lg shadow-emerald-700/25 border-2 border-emerald-300 flex items-center justify-center gap-2 cursor-pointer transition-all active:scale-[0.98]"
             >
-              Voltar e Alterar Números
+              <span>Já paguei no banco (Gerar Comprovante)</span>
+              <ArrowRight className="w-4 h-4" />
             </button>
+
+            {/* Botão voltar centralizado */}
+            <div className="flex justify-center pt-1">
+              <button
+                type="button"
+                onClick={onClose}
+                className="w-full max-w-xs py-2.5 px-6 rounded-xl border border-slate-300 text-slate-600 hover:bg-slate-100 font-semibold text-xs transition-colors cursor-pointer text-center mx-auto"
+              >
+                Voltar e Alterar Números
+              </button>
+            </div>
           </div>
         </div>
       </div>

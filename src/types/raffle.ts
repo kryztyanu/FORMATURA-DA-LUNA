@@ -35,7 +35,7 @@ export function generateNumbersList(): string[] {
 }
 
 /**
- * Format currency to Brazilian Real
+ * Format currency to Brazilian Real: R$ XX,XX
  */
 export function formatCurrencyBRL(value: number): string {
   return new Intl.NumberFormat('pt-BR', {
@@ -71,31 +71,30 @@ export function formatPhoneMask(value: string): string {
 
 /**
  * Build exact message for apostador as requested:
- * - FORMATURA DA LUNA;
- * - Sorteio: 29/11/2026
- * - Numeros escolhidos: (exibir os numeros referentes aos botoes escolhidos)
- * - Valor Pago: (exibir o montato total pago referente aos botoes escolhidos)
- * - Obrigado por participar, BOA SORTE!
+ * FORMATURA DA LUNA
+ * Sorteio: 29/11/2026
+ * Números escolhidos: (exibir os numeros referentes aos botoes escolhidos)
+ * Valor Pago: R$ (exibir o montato total pago referente aos botoes escolhidos)
+ * Obrigado por participar, BOA SORTE!
  */
 export function buildApostadorConfirmationMessage(
   numbers: string[],
   totalAmount: number
 ): string {
   const sortedNumbers = [...numbers].sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
-  return `🎓 *FORMATURA DA LUNA*
-📅 *Sorteio:* ${RAFFLE_CONFIG.drawDate}
-🎟️ *Números escolhidos:* ${sortedNumbers.join(', ')}
-💰 *Valor Pago:* ${formatCurrencyBRL(totalAmount)}
-
-🎉 *Obrigado por participar, BOA SORTE!*`;
+  return `FORMATURA DA LUNA
+Sorteio: ${RAFFLE_CONFIG.drawDate}
+Números escolhidos: ${sortedNumbers.join(', ')}
+Valor Pago: ${formatCurrencyBRL(totalAmount)}
+Obrigado por participar, BOA SORTE!`;
 }
 
 /**
  * Build exact message for organizer WhatsApp (71) 99695-3785 as requested:
- * - NOME DO APOSTADOR;
- * - WHATSAPP DO APOSTADOR;
- * - Numeros escolhidos: (exibir os numeros referentes aos botoes escolhidos)
- * - Valor Pago: (exibir o montato total pago referente aos botoes escolhidos)
+ * NOME DO APOSTADOR: ...
+ * WHATSAPP DO APOSTADOR: ...
+ * Números escolhidos: (exibir os numeros referentes aos botoes escolhidos)
+ * Valor Pago: R$ (exibir o montato total pago referente aos botoes escolhidos)
  */
 export function buildOrganizerNotificationMessage(
   name: string,
@@ -104,10 +103,8 @@ export function buildOrganizerNotificationMessage(
   totalAmount: number
 ): string {
   const sortedNumbers = [...numbers].sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
-  return `📢 *NOVA APOSTA CONFIRMADA - FORMATURA DA LUNA*
-
-👤 *NOME DO APOSTADOR:* ${name}
-📱 *WHATSAPP DO APOSTADOR:* ${phone}
-🎟️ *Números escolhidos:* ${sortedNumbers.join(', ')}
-💰 *Valor Pago:* ${formatCurrencyBRL(totalAmount)}`;
+  return `NOME DO APOSTADOR: ${name}
+WHATSAPP DO APOSTADOR: ${phone}
+Números escolhidos: ${sortedNumbers.join(', ')}
+Valor Pago: ${formatCurrencyBRL(totalAmount)}`;
 }
