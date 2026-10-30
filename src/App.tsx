@@ -4,20 +4,7 @@
  */
 
 import React, { useState, useEffect, useMemo } from 'react';
-import {
-  Sparkles,
-  Flame,
-  Calendar,
-  ShieldCheck,
-  Award,
-  Users,
-  CheckCircle,
-  HelpCircle,
-  QrCode,
-  Music,
-  ArrowDown,
-  Gift,
-} from 'lucide-react';
+import { Users } from 'lucide-react';
 import { PosterArt } from './components/PosterArt';
 import { NumbersGrid } from './components/NumbersGrid';
 import { StickyFooter } from './components/StickyFooter';
@@ -25,7 +12,7 @@ import { PaymentDialog } from './components/PaymentDialog';
 import { ConfirmationDialog } from './components/ConfirmationDialog';
 import { SoundtrackBar } from './components/SoundtrackBar';
 import { OrganizerDrawer } from './components/OrganizerDrawer';
-import { BetRecord, RAFFLE_CONFIG, generateNumbersList } from './types/raffle';
+import { BetRecord, RAFFLE_CONFIG } from './types/raffle';
 
 const STORAGE_KEY = 'luna_formatura_rifa_bets_v1';
 
@@ -112,21 +99,6 @@ export default function App() {
     setSelectedNumbers((prev) =>
       prev.includes(num) ? prev.filter((n) => n !== num) : [...prev, num]
     );
-  };
-
-  const handleClearSelection = () => {
-    setSelectedNumbers([]);
-  };
-
-  // Helper to pick random available numbers
-  const handleSelectRandom = (count: number) => {
-    const all = generateNumbersList();
-    const available = all.filter((n) => !paidNumbersMap.has(n) && !selectedNumbers.includes(n));
-    if (available.length === 0) return;
-
-    const shuffled = [...available].sort(() => 0.5 - Math.random());
-    const picked = shuffled.slice(0, count);
-    setSelectedNumbers((prev) => [...prev, ...picked]);
   };
 
   const handleScrollToNumbers = () => {
@@ -226,91 +198,17 @@ export default function App() {
         <SoundtrackBar />
 
         {/* Section 1: Official Raffle Poster (9,144cm x 16,256cm / 9:16) */}
-        <section id="arte-rifa" className="w-full">
-          <PosterArt
-            onChooseNumbersClick={handleScrollToNumbers}
-            availableCount={availableNumbersCount}
-            totalSold={paidNumbersMap.size}
-          />
+        <section id="arte-rifa" className="w-full flex justify-center">
+          <PosterArt onChooseNumbersClick={handleScrollToNumbers} />
         </section>
 
-        {/* Section 2: Sequential Numbers Panel (100 buttons: 00 to 99) */}
-        <section className="w-full pt-4">
+        {/* Section 2: Sequential Numbers Panel (100 buttons: 00 to 99 ONLY) */}
+        <section className="w-full pt-2">
           <NumbersGrid
             selectedNumbers={selectedNumbers}
             paidNumbersMap={paidNumbersMap}
             onToggleNumber={handleToggleNumber}
-            onClearSelection={handleClearSelection}
-            onSelectRandom={handleSelectRandom}
           />
-        </section>
-
-        {/* Section 3: Prize Spotlight: Kit Churrasco Premium */}
-        <section id="premio" className="w-full bg-white rounded-3xl p-5 sm:p-6 shadow-md border border-amber-200/80">
-          <div className="flex flex-col md:flex-row items-center gap-6">
-            <div className="w-full md:w-52 h-52 rounded-2xl overflow-hidden shrink-0 border-2 border-amber-300 shadow-md">
-              <img
-                src="/src/assets/images/kit_churrasco_prize_1793316300287.jpg"
-                alt="Kit Churrasco Completo da Formatura da Luna"
-                className="w-full h-full object-cover"
-                referrerPolicy="no-referrer"
-              />
-            </div>
-            <div className="space-y-2 text-left">
-              <div className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-amber-800 bg-amber-100 px-2.5 py-0.5 rounded-md">
-                <Flame className="w-3.5 h-3.5 text-amber-600" />
-                <span>Prêmio da Rifa</span>
-              </div>
-              <h3 className="text-2xl font-black text-slate-900 font-display">
-                KIT CHURRASCO COMPLETO PREMIUM
-              </h3>
-              <p className="text-sm text-slate-600 leading-relaxed">
-                Tábua nobre de corte em madeira maciça com canaletas, faca do chef em aço inox especial para churrasco, garfo trinchante de alta precisão, pegador anatômico longo, avental exclusivo do mestre churrasqueiro e kit de sais e temperos nobres.
-              </p>
-              <div className="pt-2 flex flex-wrap gap-2 text-xs font-medium text-emerald-900">
-                <span className="bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
-                  ✨ Produto 100% Novo e Lacrado
-                </span>
-                <span className="bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
-                  🍖 Entrega para o ganhador
-                </span>
-                <span className="bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
-                  📅 Sorteio Oficial: {RAFFLE_CONFIG.drawDate}
-                </span>
-              </div>
-            </div>
-          </div>
-        </section>
-
-        {/* Section 4: Rules & Transparency */}
-        <section id="regulamento" className="w-full bg-amber-100/40 rounded-3xl p-5 border border-amber-200 text-xs text-slate-700 space-y-3">
-          <div className="flex items-center gap-2 font-bold text-amber-950 text-sm font-display">
-            <ShieldCheck className="w-4 h-4 text-emerald-600" />
-            <span>Regulamento &amp; Informações Importantes</span>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div className="bg-white/80 p-3 rounded-xl border border-amber-200">
-              <div className="font-bold text-slate-900 mb-1">1. Sorteio Transparente</div>
-              <p className="text-slate-600">
-                O sorteio será realizado em <strong>{RAFFLE_CONFIG.drawDate}</strong> com base nos números oficiais da extração da Loteria Federal.
-              </p>
-            </div>
-
-            <div className="bg-white/80 p-3 rounded-xl border border-amber-200">
-              <div className="font-bold text-slate-900 mb-1">2. Pagamento via PIX</div>
-              <p className="text-slate-600">
-                Chave PIX celular: <strong>{RAFFLE_CONFIG.organizerPhoneDisplay}</strong> ({RAFFLE_CONFIG.pixKey}). Valor fixo de R$ 10,00 por número.
-              </p>
-            </div>
-
-            <div className="bg-white/80 p-3 rounded-xl border border-amber-200">
-              <div className="font-bold text-slate-900 mb-1">3. Confirmação &amp; Desistência</div>
-              <p className="text-slate-600">
-                Após confirmação de pagamento, em caso de desistência, o valor pago não será devolvido.
-              </p>
-            </div>
-          </div>
         </section>
       </main>
 

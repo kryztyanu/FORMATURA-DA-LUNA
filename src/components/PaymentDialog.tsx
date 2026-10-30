@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, Copy, Check, AlertTriangle, QrCode, Smartphone, User, ShieldAlert, Sparkles, CheckCircle2 } from 'lucide-react';
+import { X, Copy, Check, AlertTriangle, QrCode, Smartphone, User } from 'lucide-react';
 import { RAFFLE_CONFIG, formatCurrencyBRL, formatPhoneMask } from '../types/raffle';
 import { generatePixCopiaECola, generateQrCodeDataUrl } from '../utils/pix';
 
@@ -7,21 +7,19 @@ interface PaymentDialogProps {
   isOpen: boolean;
   onClose: () => void;
   selectedNumbers: string[];
-  onConfirmPayment: (name: string, phone: string) => void;
+  onConfirmPayment?: (name: string, phone: string) => void;
 }
 
 export const PaymentDialog: React.FC<PaymentDialogProps> = ({
   isOpen,
   onClose,
   selectedNumbers,
-  onConfirmPayment,
 }) => {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
   const [copiedKey, setCopiedKey] = useState(false);
   const [copiedPayload, setCopiedPayload] = useState(false);
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('');
-  const [errors, setErrors] = useState<{ name?: string; phone?: string }>({});
 
   const totalAmount = selectedNumbers.length * RAFFLE_CONFIG.pricePerNumber;
   const pixPayload = generatePixCopiaECola(
@@ -56,37 +54,10 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
   const handlePhoneChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const masked = formatPhoneMask(e.target.value);
     setPhone(masked);
-    if (errors.phone) setErrors((prev) => ({ ...prev, phone: undefined }));
   };
 
   const handleNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setName(e.target.value);
-    if (errors.name) setErrors((prev) => ({ ...prev, name: undefined }));
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    const newErrors: { name?: string; phone?: string } = {};
-
-    if (!name.trim()) {
-      newErrors.name = 'Por favor, digite seu nome completo';
-    } else if (name.trim().length < 3) {
-      newErrors.name = 'O nome deve ter no mínimo 3 caracteres';
-    }
-
-    const digitsOnly = phone.replace(/\D/g, '');
-    if (!phone.trim()) {
-      newErrors.phone = 'Por favor, digite o seu WhatsApp com DDD';
-    } else if (digitsOnly.length < 10) {
-      newErrors.phone = 'Número de WhatsApp incompleto (digite DDD + número)';
-    }
-
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      return;
-    }
-
-    onConfirmPayment(name.trim(), phone.trim());
   };
 
   return (
@@ -101,10 +72,10 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
         <div className="bg-gradient-to-r from-emerald-700 via-emerald-600 to-green-700 p-5 text-white flex items-center justify-between">
           <div>
             <div className="text-[11px] font-bold uppercase tracking-wider text-emerald-200">
-              Finalizar Aposta • Formatura da Luna
+              Pagamento PIX • Formatura da Luna
             </div>
             <h3 id="payment-dialog-title" className="text-xl sm:text-2xl font-extrabold font-display">
-              Pagamento via PIX
+              Chave PIX e Instruções
             </h3>
           </div>
           <button
@@ -117,8 +88,8 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
           </button>
         </div>
 
-        {/* Form Body */}
-        <form onSubmit={handleSubmit} className="p-5 sm:p-6 space-y-5">
+        {/* Content Body */}
+        <div className="p-5 sm:p-6 space-y-5">
           {/* Summary of chosen numbers */}
           <div className="bg-emerald-50/80 rounded-2xl p-4 border border-emerald-200 flex items-center justify-between gap-3">
             <div>
@@ -144,7 +115,6 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
               <label htmlFor="field-nome" className="block text-xs font-bold text-slate-800 uppercase tracking-wide mb-1 flex items-center gap-1.5">
                 <User className="w-4 h-4 text-emerald-600" />
                 <span>NOME</span>
-                <span className="text-rose-500">*</span>
               </label>
               <input
                 id="field-nome"
@@ -153,14 +123,8 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
                 placeholder="Ex: Maria Clara dos Santos"
                 value={name}
                 onChange={handleNameChange}
-                className={`w-full px-3.5 py-2.5 rounded-xl text-sm bg-slate-50 border ${
-                  errors.name ? 'border-rose-500 bg-rose-50/30 ring-1 ring-rose-500' : 'border-slate-300'
-                } focus:outline-none focus:ring-2 focus:ring-emerald-500`}
-                required
+                className="w-full px-3.5 py-2.5 rounded-xl text-sm bg-slate-50 border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
-              {errors.name && (
-                <p className="mt-1 text-xs text-rose-600 font-medium">{errors.name}</p>
-              )}
             </div>
 
             {/* Campo 2: WHATSAPP (Exato como solicitado) */}
@@ -168,7 +132,6 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
               <label htmlFor="field-whatsapp" className="block text-xs font-bold text-slate-800 uppercase tracking-wide mb-1 flex items-center gap-1.5">
                 <Smartphone className="w-4 h-4 text-emerald-600" />
                 <span>WHATSAPP</span>
-                <span className="text-rose-500">*</span>
               </label>
               <input
                 id="field-whatsapp"
@@ -177,17 +140,8 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
                 placeholder="Ex: (71) 99999-8888"
                 value={phone}
                 onChange={handlePhoneChange}
-                className={`w-full px-3.5 py-2.5 rounded-xl text-sm bg-slate-50 border ${
-                  errors.phone ? 'border-rose-500 bg-rose-50/30 ring-1 ring-rose-500' : 'border-slate-300'
-                } focus:outline-none focus:ring-2 focus:ring-emerald-500`}
-                required
+                className="w-full px-3.5 py-2.5 rounded-xl text-sm bg-slate-50 border border-slate-300 focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
-              <p className="mt-1 text-[11px] text-slate-500">
-                Você receberá o comprovante oficial com seus números neste WhatsApp.
-              </p>
-              {errors.phone && (
-                <p className="mt-1 text-xs text-rose-600 font-medium">{errors.phone}</p>
-              )}
             </div>
           </div>
 
@@ -259,39 +213,30 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
             )}
           </div>
 
-          {/* EXACT HIGHLIGHTED WARNING MESSAGE REQUIRED BY USER */}
-          <div className="p-4 rounded-2xl bg-amber-500/15 border-2 border-amber-500 text-amber-950 shadow-sm">
-            <div className="flex items-start gap-2.5">
-              <AlertTriangle className="w-5 h-5 text-amber-700 shrink-0 mt-0.5" />
-              <div>
-                <div className="font-black text-sm tracking-wide uppercase text-amber-900 font-display">
-                  ATENÇÃO!
-                </div>
-                <div className="text-xs font-bold leading-relaxed text-amber-950 mt-0.5">
-                  Após a confirmação do pagamento, em caso de desistência, o valor pago não será devolvido.
-                </div>
+          {/* EXACT HIGHLIGHTED WARNING MESSAGE REQUIRED BY USER - CENTERED */}
+          <div className="p-4 rounded-2xl bg-amber-500/15 border-2 border-amber-500 text-amber-950 shadow-sm text-center">
+            <div className="flex flex-col items-center justify-center gap-1.5 text-center">
+              <AlertTriangle className="w-5 h-5 text-amber-700 mx-auto" />
+              <div className="font-black text-sm tracking-wide uppercase text-amber-900 font-display">
+                ATENÇÃO!
+              </div>
+              <div className="text-xs font-bold leading-relaxed text-amber-950 max-w-sm mx-auto">
+                Após a confirmação do pagamento, em caso de desistência, o valor pago não será devolvido.
               </div>
             </div>
           </div>
 
-          {/* Action buttons */}
-          <div className="pt-2 flex flex-col sm:flex-row gap-2.5">
+          {/* Action button centered */}
+          <div className="pt-2 flex justify-center">
             <button
               type="button"
               onClick={onClose}
-              className="py-3 px-4 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 font-semibold text-sm transition-colors cursor-pointer text-center"
+              className="w-full max-w-xs py-3 px-6 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-100 font-semibold text-sm transition-colors cursor-pointer text-center mx-auto"
             >
               Voltar e Alterar Números
             </button>
-            <button
-              type="submit"
-              className="flex-1 py-3 px-5 rounded-xl bg-gradient-to-r from-emerald-600 via-green-600 to-emerald-700 hover:from-emerald-500 hover:to-emerald-600 active:scale-[0.98] text-white font-extrabold text-sm sm:text-base font-display tracking-wide uppercase shadow-lg shadow-emerald-700/20 border border-emerald-400 flex items-center justify-center gap-2 cursor-pointer transition-all"
-            >
-              <CheckCircle2 className="w-5 h-5" />
-              <span>Confirmar Pagamento</span>
-            </button>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   );
