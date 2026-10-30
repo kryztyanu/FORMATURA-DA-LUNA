@@ -181,7 +181,7 @@ export const OrganizerDrawer: React.FC<OrganizerDrawerProps> = ({
                       target="_blank"
                       rel="noopener noreferrer"
                       className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs flex items-center gap-1 shadow-xs transition-colors"
-                      title="Enviar notificação oficial desta aposta para o WhatsApp (71) 99695-3785"
+                      title={`Enviar notificação oficial desta aposta para o WhatsApp ${RAFFLE_CONFIG.organizerPhoneDisplay}`}
                     >
                       <MessageSquare className="w-3.5 h-3.5" />
                       <span>Reenviar WhatsApp</span>

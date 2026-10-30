@@ -21,11 +21,11 @@ export const RAFFLE_CONFIG = {
   title: 'FORMATURA DA LUNA',
   subtitle: 'Concorra a um KIT CHURRASCO!',
   drawDate: '29/11/2026',
-  pixKey: '71996953785',
+  pixKey: '71984791666',
   pixKeyType: 'Telefone (Celular)',
   pixRecipient: 'Luna / Responsável (Formatura da Luna)',
-  organizerPhone: '5571991581015',
-  organizerPhoneDisplay: '(71) 99158-1015',
+  organizerPhone: '5571991610882',
+  organizerPhoneDisplay: '(71) 99161-0882',
   pricePerNumber: 10.00,
   totalNumbers: 100, // 00 to 99
   artDimensions: {

@@ -82,12 +82,10 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
 
   /**
    * Action for "ENVIAR PARA O DONO DA RIFA"
-   * Emits summary to WhatsApp (71) 99158-1015 containing:
+   * Emits summary to WhatsApp (71) 99161-0882 containing:
    * - Nome do Apostador
    * - Whatspp do Apostador
    * - Números escolhidos
-   * - Valor Pago
-   * And marks the numbers as paid/locked with "X" in the app.
    */
   const handleSendToOwner = () => {
     const cleanName = name.trim();
@@ -109,7 +107,7 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
       selectedNumbers
     );
 
-    // Direct WhatsApp URL to the owner: (71) 99158-1015 (5571991581015)
+    // Direct WhatsApp URL to the owner: (71) 99161-0882 (5571991610882)
     const waUrl = `https://wa.me/${RAFFLE_CONFIG.organizerPhone}?text=${encodeURIComponent(message)}`;
 
     // Open WhatsApp in a new tab/window

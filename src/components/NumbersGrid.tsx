@@ -22,16 +22,6 @@ export const NumbersGrid: React.FC<NumbersGridProps> = ({
 
   return (
     <div id="painel-numeros" className="w-full max-w-3xl mx-auto px-2">
-      {/* Visual & Accessibility header info */}
-      <div className="flex items-center justify-between mb-2.5 px-1">
-        <span className="text-xs font-bold text-slate-700 tracking-wide">
-          Escolha seus números da sorte (00 a 99):
-        </span>
-        <span className="text-[11px] font-semibold text-emerald-800 bg-emerald-100/90 px-2 py-0.5 rounded-full border border-emerald-300">
-          100 números acessíveis
-        </span>
-      </div>
-
       {/* 100 sequential number buttons from 00 to 99 - ALL 100% ACCESSIBLE */}
       <div
         role="group"
