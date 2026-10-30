@@ -11,16 +11,24 @@ class AudioTrackManager {
   private listeners: Set<(playing: boolean, vol: number) => void> = new Set();
   private sfxCtx: AudioContext | null = null;
   private boundElement: HTMLAudioElement | null = null;
+  private manuallyStopped: boolean = false;
 
   constructor() {
     if (typeof window !== 'undefined') {
-      // Defer binding slightly so DOM is ready
       if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', () => this.getAudioElement());
+        document.addEventListener('DOMContentLoaded', () => this.init());
       } else {
-        this.getAudioElement();
+        this.init();
       }
     }
+  }
+
+  private init() {
+    this.getAudioElement();
+    this.setupGestureListeners();
+    this.setupVisibilityListeners();
+    // Immediate attempt on first page open
+    this.start();
   }
 
   /**
@@ -34,10 +42,13 @@ class AudioTrackManager {
       if (!el) {
         el = document.createElement('audio');
         el.id = 'luna-soundtrack';
-        el.src = '/assets/aistudio/Curious_Little_Motion_39a99830.mp3';
         el.loop = true;
         el.preload = 'auto';
         el.setAttribute('playsinline', 'true');
+        el.innerHTML = `
+          <source src="/assets/aistudio/Curious_Little_Motion_39a99830.mp3" type="audio/mpeg" />
+          <source src="/assets/aistudio/Curious_Little_Motion.mp3" type="audio/mpeg" />
+        `;
         document.body.appendChild(el);
       }
 
@@ -67,6 +78,53 @@ class AudioTrackManager {
     }
 
     return this.boundElement;
+  }
+
+  private setupGestureListeners() {
+    if (typeof window === 'undefined') return;
+
+    const events = ['pointerdown', 'pointerup', 'touchstart', 'touchend', 'click', 'keydown', 'mousedown'];
+    const handleGesture = () => {
+      if (!this.isPlaying && !this.manuallyStopped) {
+        this.start();
+      }
+      this.unlockAudioContext();
+    };
+
+    events.forEach((evt) => {
+      window.addEventListener(evt, handleGesture, { capture: true, passive: true });
+      document.addEventListener(evt, handleGesture, { capture: true, passive: true });
+    });
+  }
+
+  private setupVisibilityListeners() {
+    if (typeof document === 'undefined') return;
+
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden && !this.manuallyStopped && !this.isPlaying) {
+        this.start();
+      }
+    });
+
+    window.addEventListener('focus', () => {
+      if (!this.manuallyStopped && !this.isPlaying) {
+        this.start();
+      }
+    });
+  }
+
+  private unlockAudioContext() {
+    try {
+      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+      if (!this.sfxCtx && AudioCtx) {
+        this.sfxCtx = new AudioCtx();
+      }
+      if (this.sfxCtx && this.sfxCtx.state === 'suspended') {
+        this.sfxCtx.resume().catch(() => {});
+      }
+    } catch {
+      // ignore
+    }
   }
 
   public subscribe(listener: (playing: boolean, vol: number) => void): () => void {
@@ -107,6 +165,9 @@ class AudioTrackManager {
     const el = this.getAudioElement();
     if (!el) return false;
 
+    this.manuallyStopped = false;
+    this.unlockAudioContext();
+
     try {
       el.volume = this.volume;
       el.loop = true;
@@ -117,8 +178,8 @@ class AudioTrackManager {
       this.isPlaying = true;
       this.notify();
       return true;
-    } catch (err) {
-      // Browser blocked autoplay without user gesture
+    } catch {
+      // Browser autoplay policy awaiting user gesture
       this.isPlaying = false;
       this.notify();
       return false;
@@ -126,6 +187,7 @@ class AudioTrackManager {
   }
 
   public stop() {
+    this.manuallyStopped = true;
     const el = this.getAudioElement();
     if (el) {
       el.pause();
@@ -148,13 +210,8 @@ class AudioTrackManager {
   // Tactile sound effect on number toggle
   public playClickSound(isSelected: boolean) {
     try {
-      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-      if (!this.sfxCtx) {
-        this.sfxCtx = new AudioCtx();
-      }
-      if (this.sfxCtx.state === 'suspended') {
-        this.sfxCtx.resume();
-      }
+      this.unlockAudioContext();
+      if (!this.sfxCtx) return;
       const now = this.sfxCtx.currentTime;
       const osc = this.sfxCtx.createOscillator();
       const gain = this.sfxCtx.createGain();
@@ -179,13 +236,8 @@ class AudioTrackManager {
   // Celebration chime on payment confirmed
   public playCelebrationChime() {
     try {
-      const AudioCtx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-      if (!this.sfxCtx) {
-        this.sfxCtx = new AudioCtx();
-      }
-      if (this.sfxCtx.state === 'suspended') {
-        this.sfxCtx.resume();
-      }
+      this.unlockAudioContext();
+      if (!this.sfxCtx) return;
       const notes = [440.0, 554.37, 659.25, 880.0, 1108.73];
       const now = this.sfxCtx.currentTime;
 

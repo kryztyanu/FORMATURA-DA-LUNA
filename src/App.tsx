@@ -4,13 +4,13 @@
  */
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { ArrowLeft, Volume2, VolumeX } from 'lucide-react';
+import { ArrowLeft, Volume2, VolumeX, Receipt } from 'lucide-react';
 import { PosterArt } from './components/PosterArt';
 import { NumbersGrid } from './components/NumbersGrid';
 import { StickyFooter } from './components/StickyFooter';
 import { PaymentDialog } from './components/PaymentDialog';
-import { ConfirmationDialog } from './components/ConfirmationDialog';
-import { BetRecord, RAFFLE_CONFIG } from './types/raffle';
+import { BetSummaryDialog } from './components/BetSummaryDialog';
+import { BetRecord, RAFFLE_CONFIG, BankingReceipt } from './types/raffle';
 import { schoolSoundtrack } from './utils/audio';
 
 const STORAGE_KEY = 'luna_formatura_rifa_bets_v1';
@@ -41,7 +41,7 @@ export default function App() {
   });
 
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
-  const [isConfirmationOpen, setIsConfirmationOpen] = useState(false);
+  const [isBetSummaryOpen, setIsBetSummaryOpen] = useState(false);
   const [lastConfirmedBet, setLastConfirmedBet] = useState<BetRecord | null>(null);
 
   // Automatic audio start on app launch (volume 30%) with user gesture fallback for browser policy
@@ -100,7 +100,7 @@ export default function App() {
 
   // Toggle selection for a single number button
   const handleToggleNumber = (num: string) => {
-    if (paidNumbersMap.has(num)) return; // Inaccessible
+    if (paidNumbersMap.has(num)) return; // Inaccessible once paid
     setSelectedNumbers((prev) =>
       prev.includes(num) ? prev.filter((n) => n !== num) : [...prev, num]
     );
@@ -118,7 +118,7 @@ export default function App() {
   };
 
   const handleBackToPoster = () => {
-    // Return to start screen and undo chosen numbers
+    // Return to start screen and undo chosen pending numbers
     setSelectedNumbers([]);
     setCurrentScreen('poster');
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -129,8 +129,8 @@ export default function App() {
     setIsPaymentOpen(true);
   };
 
-  // Confirmation of payment
-  const handleConfirmPayment = (name: string, phone: string) => {
+  // Direct confirmation from financial institution (PIX Liquidation)
+  const handlePaymentConfirmedByBank = (name: string, phone: string, receipt: BankingReceipt) => {
     const totalAmount = selectedNumbers.length * RAFFLE_CONFIG.pricePerNumber;
     const newBet: BetRecord = {
       id: `bet-${Date.now()}`,
@@ -138,14 +138,22 @@ export default function App() {
       phone,
       numbers: [...selectedNumbers],
       totalAmount,
-      paidAt: new Date().toISOString(),
+      paidAt: receipt.confirmedAt || new Date().toISOString(),
+      banking: receipt,
     };
 
+    // 1. Immediately register paid bet (locking numbers in paidNumbersMap)
     setBets((prev) => [newBet, ...prev]);
     setLastConfirmedBet(newBet);
+
+    // 2. Clear pending selection: in the grid, these numbers will now display the red "X" and be completely inaccessible
     setSelectedNumbers([]);
+
+    // 3. Close payment modal
     setIsPaymentOpen(false);
-    setIsConfirmationOpen(true);
+
+    // 4. Open the official RESUMO DA APOSTA for the apostador!
+    setIsBetSummaryOpen(true);
   };
 
   return (
@@ -175,15 +183,18 @@ export default function App() {
       {/* SCREEN 1: First screen showing only the authentic raffle art */}
       {currentScreen === 'poster' && (
         <main className="w-full max-w-md mx-auto flex flex-col items-center justify-center my-auto">
-          <PosterArt onChooseNumbersClick={handleChooseNumbers} />
+          <PosterArt
+            onChooseNumbersClick={handleChooseNumbers}
+            isAudioPlaying={isAudioPlaying}
+          />
         </main>
       )}
 
       {/* SCREEN 2: Second screen showing ONLY the 100 number buttons for selection */}
       {currentScreen === 'numbers' && (
         <main className="w-full max-w-3xl mx-auto flex flex-col items-center pt-2">
-          {/* Back button to return to start screen and undo selections */}
-          <div className="w-full flex justify-start mb-3 px-2">
+          {/* Top Bar with Voltar button and Resumo da Aposta button if a bet exists */}
+          <div className="w-full flex items-center justify-between mb-3 px-2">
             <button
               onClick={handleBackToPoster}
               type="button"
@@ -192,6 +203,19 @@ export default function App() {
               <ArrowLeft className="w-3.5 h-3.5" />
               <span>Voltar</span>
             </button>
+
+            {/* Quick access to Resumo da Aposta if user has a confirmed bet */}
+            {lastConfirmedBet && (
+              <button
+                type="button"
+                onClick={() => setIsBetSummaryOpen(true)}
+                className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
+                title="Ver o resumo oficial da sua aposta confirmada"
+              >
+                <Receipt className="w-3.5 h-3.5" />
+                <span>Ver Resumo da Aposta</span>
+              </button>
+            )}
           </div>
 
           {/* Contains ONLY the 100 buttons with their respective numbers (00 to 99) */}
@@ -212,18 +236,18 @@ export default function App() {
         />
       )}
 
-      {/* Payment Dialog with NOME, WHATSAPP, PIX 71996953785 and centered ATENÇÃO warning */}
+      {/* Payment Dialog with direct Financial Institution integration, PIX, and centered ATENÇÃO warning */}
       <PaymentDialog
         isOpen={isPaymentOpen}
         onClose={() => setIsPaymentOpen(false)}
         selectedNumbers={selectedNumbers}
-        onConfirmPayment={handleConfirmPayment}
+        onPaymentConfirmedByBank={handlePaymentConfirmedByBank}
       />
 
-      {/* Confirmation Dialog after payment */}
-      <ConfirmationDialog
-        isOpen={isConfirmationOpen}
-        onClose={() => setIsConfirmationOpen(false)}
+      {/* Dedicated RESUMO DA APOSTA for the apostador after financial institution confirmation */}
+      <BetSummaryDialog
+        isOpen={isBetSummaryOpen}
+        onClose={() => setIsBetSummaryOpen(false)}
         bet={lastConfirmedBet}
       />
     </div>

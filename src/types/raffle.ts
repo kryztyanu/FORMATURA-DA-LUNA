@@ -1,3 +1,11 @@
+export interface BankingReceipt {
+  institution: string;
+  transactionId: string;
+  endToEndId: string;
+  authenticationCode: string;
+  confirmedAt: string;
+}
+
 export interface BetRecord {
   id: string;
   name: string;
@@ -6,6 +14,7 @@ export interface BetRecord {
   totalAmount: number;
   paidAt: string;
   txHash?: string;
+  banking?: BankingReceipt;
 }
 
 export const RAFFLE_CONFIG = {
