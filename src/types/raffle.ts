@@ -108,13 +108,11 @@ Obrigado por participar, BOA SORTE!`;
 export function buildOrganizerNotificationMessage(
   name: string,
   phone: string,
-  numbers: string[],
-  totalAmount: number
+  numbers: string[]
 ): string {
   const sortedNumbers = [...numbers].sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
-  return `FORMATURA DA LUNA - RIFA
-Nome do Apostador: ${name}
-Whatspp do Apostador: ${phone}
-Números escolhidos: ${sortedNumbers.join(', ')}
-Valor Pago: ${formatCurrencyBRL(totalAmount)}`;
+  return `*RIFA DE FORMATURA DA LUNA*
+*Nome do Apostador:* ${name.trim()}
+*Whatspp do Apostador:* ${phone.trim()}
+*Números escolhidos:* ${sortedNumbers.join(', ')}`;
 }

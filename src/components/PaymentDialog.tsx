@@ -102,12 +102,11 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
       return;
     }
 
-    // Build the official summary message for the raffle owner
+    // Build the official summary message for the raffle owner (*RIFA DE FORMATURA DA LUNA*, bold fields, no valor pago)
     const message = buildOrganizerNotificationMessage(
       cleanName,
       phone,
-      selectedNumbers,
-      totalAmount
+      selectedNumbers
     );
 
     // Direct WhatsApp URL to the owner: (71) 99158-1015 (5571991581015)

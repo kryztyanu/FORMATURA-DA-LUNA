@@ -1,5 +1,4 @@
 import React from 'react';
-import { Volume2 } from 'lucide-react';
 import { schoolSoundtrack } from '../utils/audio';
 
 interface PosterArtProps {
@@ -21,17 +20,6 @@ export const PosterArt: React.FC<PosterArtProps> = ({
       className="flex flex-col items-center w-full"
       onClick={handlePosterInteraction}
     >
-      {/* Friendly prompt if browser autoplay policy paused audio awaiting initial gesture */}
-      {!isAudioPlaying && (
-        <button
-          type="button"
-          onClick={handlePosterInteraction}
-          className="mb-2.5 px-4 py-1.5 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs shadow-md flex items-center gap-1.5 animate-pulse cursor-pointer border border-emerald-400 transition-all active:scale-95 z-20"
-        >
-          <Volume2 className="w-3.5 h-3.5" />
-          <span>Toque para ativar o som da rifa 🎵</span>
-        </button>
-      )}
 
       {/* 9,144cm x 16,256cm (9:16) Authentic Poster Frame */}
       <div

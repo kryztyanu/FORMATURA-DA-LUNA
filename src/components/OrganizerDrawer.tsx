@@ -143,8 +143,7 @@ export const OrganizerDrawer: React.FC<OrganizerDrawerProps> = ({
               const organizerMsg = buildOrganizerNotificationMessage(
                 b.name,
                 b.phone,
-                b.numbers,
-                b.totalAmount
+                b.numbers
               );
               const notifyWaLink = `https://api.whatsapp.com/send?phone=${RAFFLE_CONFIG.organizerPhone}&text=${encodeURIComponent(organizerMsg)}`;
 

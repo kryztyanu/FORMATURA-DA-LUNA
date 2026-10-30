@@ -4,12 +4,11 @@
  */
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { ArrowLeft, Volume2, VolumeX, Receipt } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { PosterArt } from './components/PosterArt';
 import { NumbersGrid } from './components/NumbersGrid';
 import { StickyFooter } from './components/StickyFooter';
 import { PaymentDialog } from './components/PaymentDialog';
-import { BetSummaryDialog } from './components/BetSummaryDialog';
 import { BetRecord, RAFFLE_CONFIG } from './types/raffle';
 import { schoolSoundtrack } from './utils/audio';
 
@@ -41,8 +40,6 @@ export default function App() {
   });
 
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
-  const [isBetSummaryOpen, setIsBetSummaryOpen] = useState(false);
-  const [lastConfirmedBet, setLastConfirmedBet] = useState<BetRecord | null>(null);
 
   // Automatic audio start on app launch (volume 30%) with user gesture fallback for browser policy
   const audioStartedRef = useRef(false);
@@ -143,42 +140,16 @@ export default function App() {
 
     // 1. Immediately register paid bet (locking numbers in paidNumbersMap with red 'X')
     setBets((prev) => [newBet, ...prev]);
-    setLastConfirmedBet(newBet);
 
     // 2. Clear pending selection: in the grid, these numbers will now display the red "X" and be completely inaccessible
     setSelectedNumbers([]);
 
-    // 3. Close payment modal
+    // 3. Close payment modal (no Resumo da Aposta screen opened)
     setIsPaymentOpen(false);
-
-    // 4. Open the official RESUMO DA APOSTA for the apostador
-    setIsBetSummaryOpen(true);
   };
 
   return (
     <div className="min-h-screen bg-notebook-pattern pb-28 text-slate-800 flex flex-col items-center justify-start p-3 sm:p-5 relative">
-      {/* Discreet floating soundtrack toggle in top corner */}
-      <button
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          schoolSoundtrack.toggle();
-        }}
-        aria-label={isAudioPlaying ? 'Silenciar trilha sonora' : 'Tocar trilha sonora'}
-        title={isAudioPlaying ? 'Silenciar trilha sonora (30%)' : 'Tocar trilha sonora (30%)'}
-        className={`fixed top-3 right-3 z-50 w-9 h-9 rounded-full shadow-md border flex items-center justify-center transition-all cursor-pointer hover:scale-105 active:scale-95 ${
-          isAudioPlaying
-            ? 'bg-white/90 hover:bg-white text-emerald-600 border-slate-200'
-            : 'bg-amber-100 hover:bg-amber-200 text-amber-800 border-amber-300'
-        }`}
-      >
-        {isAudioPlaying ? (
-          <Volume2 className="w-4 h-4 text-emerald-600" />
-        ) : (
-          <VolumeX className="w-4 h-4 text-amber-700" />
-        )}
-      </button>
-
       {/* SCREEN 1: First screen showing only the authentic raffle art */}
       {currentScreen === 'poster' && (
         <main className="w-full max-w-md mx-auto flex flex-col items-center justify-center my-auto">
@@ -192,7 +163,7 @@ export default function App() {
       {/* SCREEN 2: Second screen showing ONLY the 100 number buttons for selection */}
       {currentScreen === 'numbers' && (
         <main className="w-full max-w-3xl mx-auto flex flex-col items-center pt-2">
-          {/* Top Bar with Voltar button and Resumo da Aposta button if a bet exists */}
+          {/* Top Bar with Voltar button */}
           <div className="w-full flex items-center justify-between mb-3 px-2">
             <button
               onClick={handleBackToPoster}
@@ -202,19 +173,6 @@ export default function App() {
               <ArrowLeft className="w-3.5 h-3.5" />
               <span>Voltar</span>
             </button>
-
-            {/* Quick access to Resumo da Aposta if user has a confirmed bet */}
-            {lastConfirmedBet && (
-              <button
-                type="button"
-                onClick={() => setIsBetSummaryOpen(true)}
-                className="px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-sm transition-all cursor-pointer"
-                title="Ver o resumo oficial da sua aposta confirmada"
-              >
-                <Receipt className="w-3.5 h-3.5" />
-                <span>Ver Resumo da Aposta</span>
-              </button>
-            )}
           </div>
 
           {/* Contains ONLY the 100 buttons with their respective numbers (00 to 99) */}
@@ -241,13 +199,6 @@ export default function App() {
         onClose={() => setIsPaymentOpen(false)}
         selectedNumbers={selectedNumbers}
         onConfirmPayment={handleConfirmPayment}
-      />
-
-      {/* Dedicated RESUMO DA APOSTA for the apostador after financial institution confirmation */}
-      <BetSummaryDialog
-        isOpen={isBetSummaryOpen}
-        onClose={() => setIsBetSummaryOpen(false)}
-        bet={lastConfirmedBet}
       />
     </div>
   );

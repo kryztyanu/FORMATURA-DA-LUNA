@@ -11,7 +11,6 @@ class AudioTrackManager {
   private listeners: Set<(playing: boolean, vol: number) => void> = new Set();
   private sfxCtx: AudioContext | null = null;
   private boundElement: HTMLAudioElement | null = null;
-  private manuallyStopped: boolean = false;
 
   constructor() {
     if (typeof window !== 'undefined') {
@@ -85,9 +84,7 @@ class AudioTrackManager {
 
     const events = ['pointerdown', 'pointerup', 'touchstart', 'touchend', 'click', 'keydown', 'mousedown'];
     const handleGesture = () => {
-      if (!this.isPlaying && !this.manuallyStopped) {
-        this.start();
-      }
+      this.start();
       this.unlockAudioContext();
     };
 
@@ -101,15 +98,13 @@ class AudioTrackManager {
     if (typeof document === 'undefined') return;
 
     document.addEventListener('visibilitychange', () => {
-      if (!document.hidden && !this.manuallyStopped && !this.isPlaying) {
+      if (!document.hidden) {
         this.start();
       }
     });
 
     window.addEventListener('focus', () => {
-      if (!this.manuallyStopped && !this.isPlaying) {
-        this.start();
-      }
+      this.start();
     });
   }
 
@@ -165,7 +160,6 @@ class AudioTrackManager {
     const el = this.getAudioElement();
     if (!el) return false;
 
-    this.manuallyStopped = false;
     this.unlockAudioContext();
 
     try {
@@ -187,24 +181,14 @@ class AudioTrackManager {
   }
 
   public stop() {
-    this.manuallyStopped = true;
-    const el = this.getAudioElement();
-    if (el) {
-      el.pause();
-    }
-    this.isPlaying = false;
-    this.notify();
+    // The soundtrack cannot be silenced per user instruction
+    this.start();
   }
 
   public toggle(): boolean {
-    const el = this.getAudioElement();
-    if (el && !el.paused) {
-      this.stop();
-      return false;
-    } else {
-      this.start();
-      return true;
-    }
+    // Cannot be silenced per user instruction - keep playing
+    this.start();
+    return true;
   }
 
   // Tactile sound effect on number toggle
