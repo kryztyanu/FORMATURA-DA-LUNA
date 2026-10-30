@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { Volume2 } from 'lucide-react';
 import { schoolSoundtrack } from '../utils/audio';
 
 interface PosterArtProps {
@@ -15,11 +16,30 @@ export const PosterArt: React.FC<PosterArtProps> = ({
     schoolSoundtrack.start();
   };
 
+  useEffect(() => {
+    // Attempt audio start as soon as first screen mounts
+    schoolSoundtrack.setVolume(0.3);
+    schoolSoundtrack.start();
+  }, []);
+
   return (
     <div
       className="flex flex-col items-center w-full"
       onClick={handlePosterInteraction}
+      onTouchStart={handlePosterInteraction}
+      onPointerDown={handlePosterInteraction}
     >
+      {/* If browser autoplay policy blocked zero-click unmuted playback, show an inviting prompt to kick off the soundtrack */}
+      {!isAudioPlaying && (
+        <button
+          type="button"
+          onClick={handlePosterInteraction}
+          className="mb-3 w-full max-w-[440px] px-4 py-2.5 bg-gradient-to-r from-amber-500 via-yellow-400 to-amber-500 text-slate-950 font-bold text-xs sm:text-sm rounded-2xl shadow-lg border border-amber-300 flex items-center justify-center gap-2 animate-bounce cursor-pointer hover:brightness-105 active:scale-95 transition-all select-none"
+        >
+          <Volume2 className="w-4 h-4 animate-pulse text-amber-950" />
+          <span>🎵 Toque aqui para curtir a trilha da Luna!</span>
+        </button>
+      )}
 
       {/* 9,144cm x 16,256cm (9:16) Authentic Poster Frame */}
       <div

@@ -12,10 +12,7 @@ import { PaymentDialog } from './components/PaymentDialog';
 import { BetRecord, RAFFLE_CONFIG } from './types/raffle';
 import { schoolSoundtrack } from './utils/audio';
 
-const STORAGE_KEY = 'luna_formatura_rifa_bets_v1';
-
-// All 100 buttons start 100% available/eligible, getting an 'X' only when chosen and paid
-const INITIAL_BETS: BetRecord[] = [];
+const STORAGE_KEY = 'luna_formatura_rifa_bets_v2';
 
 export default function App() {
   // Screen state: 'poster' (first screen) or 'numbers' (second screen, shown only after clicking ESCOLHER NUMEROS)
@@ -25,18 +22,12 @@ export default function App() {
   const [selectedNumbers, setSelectedNumbers] = useState<string[]>([]);
   const [bets, setBets] = useState<BetRecord[]>(() => {
     try {
-      const saved = localStorage.getItem(STORAGE_KEY);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed)) {
-          // If previous mock bets were stored, filter them out so only genuine user bets exist
-          return parsed.filter((b: BetRecord) => !b.id.startsWith('bet-init-'));
-        }
-      }
-    } catch (e) {
-      console.error('Failed to load saved bets', e);
+      // Clear legacy storage key to make sure all numbers are 100% accessible and not blocked
+      localStorage.removeItem('luna_formatura_rifa_bets_v1');
+    } catch {
+      // ignore
     }
-    return INITIAL_BETS;
+    return [];
   });
 
   const [isPaymentOpen, setIsPaymentOpen] = useState(false);
@@ -45,6 +36,13 @@ export default function App() {
   const audioStartedRef = useRef(false);
 
   useEffect(() => {
+    // Ensure legacy blocked bets are cleaned out so all 100 numbers (00-99) remain fully accessible
+    try {
+      localStorage.removeItem('luna_formatura_rifa_bets_v1');
+    } catch {
+      // ignore
+    }
+
     const unsub = schoolSoundtrack.subscribe((playing) => {
       setIsAudioPlaying(playing);
     });
@@ -95,12 +93,15 @@ export default function App() {
     return map;
   }, [bets]);
 
-  // Toggle selection for a single number button
+  // Toggle selection for a single number button - ALL numbers are 100% accessible
   const handleToggleNumber = (num: string) => {
-    if (paidNumbersMap.has(num)) return; // Inaccessible once paid
     setSelectedNumbers((prev) =>
       prev.includes(num) ? prev.filter((n) => n !== num) : [...prev, num]
     );
+  };
+
+  const handleClearSelectedNumbers = () => {
+    setSelectedNumbers([]);
   };
 
   // Called when user clicks "ESCOLHER NUMEROS" on the first screen
@@ -138,18 +139,17 @@ export default function App() {
       paidAt: new Date().toISOString(),
     };
 
-    // 1. Immediately register paid bet (locking numbers in paidNumbersMap with red 'X')
     setBets((prev) => [newBet, ...prev]);
 
-    // 2. Clear pending selection: in the grid, these numbers will now display the red "X" and be completely inaccessible
+    // Clear pending selection
     setSelectedNumbers([]);
 
-    // 3. Close payment modal (no Resumo da Aposta screen opened)
+    // Close payment modal (no Resumo da Aposta screen opened)
     setIsPaymentOpen(false);
   };
 
   return (
-    <div className="min-h-screen bg-notebook-pattern pb-28 text-slate-800 flex flex-col items-center justify-start p-3 sm:p-5 relative">
+    <div className="min-h-screen bg-notebook-pattern pb-36 text-slate-800 flex flex-col items-center justify-start p-3 sm:p-5 relative">
       {/* SCREEN 1: First screen showing only the authentic raffle art */}
       {currentScreen === 'poster' && (
         <main className="w-full max-w-md mx-auto flex flex-col items-center justify-center my-auto">
@@ -163,7 +163,7 @@ export default function App() {
       {/* SCREEN 2: Second screen showing ONLY the 100 number buttons for selection */}
       {currentScreen === 'numbers' && (
         <main className="w-full max-w-3xl mx-auto flex flex-col items-center pt-2">
-          {/* Top Bar with Voltar button */}
+          {/* Top Bar with Voltar and Desmarcar buttons */}
           <div className="w-full flex items-center justify-between mb-3 px-2">
             <button
               onClick={handleBackToPoster}
@@ -173,9 +173,19 @@ export default function App() {
               <ArrowLeft className="w-3.5 h-3.5" />
               <span>Voltar</span>
             </button>
+
+            {selectedNumbers.length > 0 && (
+              <button
+                onClick={handleClearSelectedNumbers}
+                type="button"
+                className="px-3 py-1.5 rounded-xl bg-white/90 hover:bg-rose-50 text-rose-700 hover:text-rose-800 border border-rose-200 shadow-sm text-xs font-semibold transition-colors cursor-pointer"
+              >
+                Desmarcar todos ({selectedNumbers.length})
+              </button>
+            )}
           </div>
 
-          {/* Contains ONLY the 100 buttons with their respective numbers (00 to 99) */}
+          {/* Contains ALL 100 accessible buttons with their respective numbers (00 to 99) */}
           <NumbersGrid
             selectedNumbers={selectedNumbers}
             paidNumbersMap={paidNumbersMap}

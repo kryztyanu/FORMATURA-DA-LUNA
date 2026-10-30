@@ -12,6 +12,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600;700&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
+    <link rel="preload" as="audio" href="/assets/aistudio/Curious_Little_Motion_39a99830.mp3" type="audio/mpeg">
   </head>
   <body class="bg-amber-50/40 text-slate-900 font-sans antialiased selection:bg-emerald-200 selection:text-emerald-900">
     <div id="root"></div>
@@ -19,12 +20,15 @@
     <!-- Official background soundtrack for Luna's graduation raffle, continuous loop at 30% volume -->
     <audio
       id="luna-soundtrack"
+      src="/assets/aistudio/Curious_Little_Motion_39a99830.mp3"
+      autoplay
       preload="auto"
       playsinline
       loop
     >
       <source src="/assets/aistudio/Curious_Little_Motion_39a99830.mp3" type="audio/mpeg" />
       <source src="/assets/aistudio/Curious_Little_Motion.mp3" type="audio/mpeg" />
+      <source src="/Curious_Little_Motion.mp3" type="audio/mpeg" />
     </audio>
 
     <script>
@@ -34,29 +38,40 @@
         audio.volume = 0.3;
         audio.loop = true;
 
-        function startAudio() {
+        function attemptPlay() {
           if (!audio) return;
           audio.volume = 0.3;
           var p = audio.play();
-          if (p && typeof p.catch === 'function') {
-            p.catch(function() {
-              // Awaiting user gesture in accordance with browser autoplay policy
+          if (p && typeof p.then === 'function') {
+            p.then(function() {
+              // Playing successfully
+            }).catch(function() {
+              // Awaiting user gesture per browser policy
             });
           }
         }
 
-        startAudio();
-        window.addEventListener('DOMContentLoaded', startAudio);
-        window.addEventListener('load', startAudio);
+        // Try immediately upon script execution
+        attemptPlay();
+        window.addEventListener('DOMContentLoaded', attemptPlay);
+        window.addEventListener('load', attemptPlay);
 
-        var events = ['pointerdown', 'touchstart', 'touchend', 'click', 'keydown', 'mousedown'];
+        // Keep trying periodically for the first few seconds until started
+        var attempts = 0;
+        var timer = setInterval(function() {
+          attempts++;
+          if (!audio.paused || attempts > 20) {
+            clearInterval(timer);
+            return;
+          }
+          attemptPlay();
+        }, 250);
+
+        // Capture every user interaction across the window and document
+        var events = ['pointerdown', 'pointerup', 'touchstart', 'touchend', 'click', 'keydown', 'mousedown', 'mouseup'];
         function onGesture() {
           if (audio && audio.paused) {
-            audio.volume = 0.3;
-            var p = audio.play();
-            if (p && typeof p.catch === 'function') {
-              p.catch(function() {});
-            }
+            attemptPlay();
           }
         }
 

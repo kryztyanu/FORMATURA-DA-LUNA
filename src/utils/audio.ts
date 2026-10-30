@@ -28,6 +28,17 @@ class AudioTrackManager {
     this.setupVisibilityListeners();
     // Immediate attempt on first page open
     this.start();
+
+    // Polling retry on startup in case audio element is buffering or awaiting gesture
+    let attempts = 0;
+    const interval = setInterval(() => {
+      attempts++;
+      if (this.isPlaying || attempts > 25) {
+        clearInterval(interval);
+        return;
+      }
+      this.start();
+    }, 200);
   }
 
   /**
@@ -41,14 +52,19 @@ class AudioTrackManager {
       if (!el) {
         el = document.createElement('audio');
         el.id = 'luna-soundtrack';
+        el.src = '/assets/aistudio/Curious_Little_Motion_39a99830.mp3';
         el.loop = true;
         el.preload = 'auto';
         el.setAttribute('playsinline', 'true');
+        el.setAttribute('autoplay', 'true');
         el.innerHTML = `
           <source src="/assets/aistudio/Curious_Little_Motion_39a99830.mp3" type="audio/mpeg" />
           <source src="/assets/aistudio/Curious_Little_Motion.mp3" type="audio/mpeg" />
+          <source src="/Curious_Little_Motion.mp3" type="audio/mpeg" />
         `;
         document.body.appendChild(el);
+      } else if (!el.src) {
+        el.src = '/assets/aistudio/Curious_Little_Motion_39a99830.mp3';
       }
 
       el.volume = this.volume;
@@ -62,6 +78,18 @@ class AudioTrackManager {
       el.addEventListener('pause', () => {
         this.isPlaying = false;
         this.notify();
+      });
+
+      el.addEventListener('canplay', () => {
+        if (el && el.paused) {
+          this.start();
+        }
+      });
+
+      el.addEventListener('loadeddata', () => {
+        if (el && el.paused) {
+          this.start();
+        }
       });
 
       el.addEventListener('ended', () => {
@@ -82,7 +110,7 @@ class AudioTrackManager {
   private setupGestureListeners() {
     if (typeof window === 'undefined') return;
 
-    const events = ['pointerdown', 'pointerup', 'touchstart', 'touchend', 'click', 'keydown', 'mousedown'];
+    const events = ['pointerdown', 'pointerup', 'touchstart', 'touchend', 'click', 'keydown', 'mousedown', 'mouseup'];
     const handleGesture = () => {
       this.start();
       this.unlockAudioContext();
