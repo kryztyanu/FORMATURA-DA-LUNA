@@ -1,4 +1,4 @@
-import React from 'react';
+import { schoolSoundtrack } from '../utils/audio';
 
 interface PosterArtProps {
   onChooseNumbersClick: () => void;
@@ -7,8 +7,13 @@ interface PosterArtProps {
 export const PosterArt: React.FC<PosterArtProps> = ({
   onChooseNumbersClick,
 }) => {
+  const handlePosterInteraction = () => {
+    schoolSoundtrack.setVolume(0.3);
+    schoolSoundtrack.start();
+  };
+
   return (
-    <div className="flex flex-col items-center w-full">
+    <div className="flex flex-col items-center w-full" onClick={handlePosterInteraction}>
       {/* 9,144cm x 16,256cm (9:16) Authentic Poster Frame */}
       <div
         className="relative w-full max-w-[440px] aspect-[9/16] rounded-3xl overflow-hidden shadow-2xl border-4 border-amber-300 bg-amber-100 flex flex-col justify-end select-none transition-transform"

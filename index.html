@@ -15,6 +15,55 @@
   </head>
   <body class="bg-amber-50/40 text-slate-900 font-sans antialiased selection:bg-emerald-200 selection:text-emerald-900">
     <div id="root"></div>
+
+    <!-- Official background soundtrack for Luna's graduation raffle, continuous loop at 30% volume -->
+    <audio
+      id="luna-soundtrack"
+      src="/assets/aistudio/Curious_Little_Motion_39a99830.mp3"
+      loop
+      preload="auto"
+      playsinline
+      autoplay
+    ></audio>
+
+    <script>
+      (function() {
+        var audio = document.getElementById('luna-soundtrack');
+        if (!audio) return;
+        audio.volume = 0.3;
+
+        function tryPlayAudio() {
+          if (!audio) return;
+          audio.volume = 0.3;
+          var p = audio.play();
+          if (p && p.catch) {
+            p.catch(function() {
+              // Autoplay policy awaiting user gesture
+            });
+          }
+        }
+
+        // Try playing immediately upon entrance
+        tryPlayAudio();
+        window.addEventListener('DOMContentLoaded', tryPlayAudio);
+        window.addEventListener('load', tryPlayAudio);
+
+        // Instant synchronous unlock on ANY user touch or click anywhere in the window
+        var interactionEvents = ['pointerdown', 'touchstart', 'touchend', 'click', 'keydown', 'mousedown'];
+        function onUserInteraction() {
+          if (audio) {
+            audio.volume = 0.3;
+            var p = audio.play();
+            if (p && p.catch) p.catch(function() {});
+          }
+        }
+
+        interactionEvents.forEach(function(evt) {
+          window.addEventListener(evt, onUserInteraction, { capture: true, passive: true });
+          document.addEventListener(evt, onUserInteraction, { capture: true, passive: true });
+        });
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

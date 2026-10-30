@@ -4,7 +4,7 @@
  */
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Volume2, VolumeX } from 'lucide-react';
 import { PosterArt } from './components/PosterArt';
 import { NumbersGrid } from './components/NumbersGrid';
 import { StickyFooter } from './components/StickyFooter';
@@ -21,6 +21,7 @@ const INITIAL_BETS: BetRecord[] = [];
 export default function App() {
   // Screen state: 'poster' (first screen) or 'numbers' (second screen, shown only after clicking ESCOLHER NUMEROS)
   const [currentScreen, setCurrentScreen] = useState<'poster' | 'numbers'>('poster');
+  const [isAudioPlaying, setIsAudioPlaying] = useState(false);
 
   const [selectedNumbers, setSelectedNumbers] = useState<string[]>([]);
   const [bets, setBets] = useState<BetRecord[]>(() => {
@@ -47,34 +48,33 @@ export default function App() {
   const audioStartedRef = useRef(false);
 
   useEffect(() => {
-    const tryAutoplay = async () => {
-      if (audioStartedRef.current) return;
-      schoolSoundtrack.setVolume(0.3); // Exactly 30% volume
-      const success = await schoolSoundtrack.start();
-      if (success) {
-        audioStartedRef.current = true;
-      }
+    const unsub = schoolSoundtrack.subscribe((playing) => {
+      setIsAudioPlaying(playing);
+    });
+
+    // Start playback immediately at 30% volume
+    schoolSoundtrack.setVolume(0.3);
+    schoolSoundtrack.start();
+
+    // Fallback for browsers with strict autoplay policies:
+    // Any click, tap or keypress synchronously resumes/starts the audio pipeline
+    const handleSynchronousGesture = () => {
+      schoolSoundtrack.setVolume(0.3);
+      schoolSoundtrack.start();
     };
 
-    tryAutoplay();
-
-    // Browser autoplay policy handler: starts seamlessly on the first tap/click if blocked initially
-    const handleFirstGesture = async () => {
-      if (!audioStartedRef.current) {
-        schoolSoundtrack.setVolume(0.3);
-        const ok = await schoolSoundtrack.start();
-        if (ok) audioStartedRef.current = true;
-      }
-    };
-
-    window.addEventListener('click', handleFirstGesture, { passive: true });
-    window.addEventListener('touchstart', handleFirstGesture, { passive: true });
-    window.addEventListener('keydown', handleFirstGesture, { passive: true });
+    const events = ['pointerdown', 'touchstart', 'touchend', 'click', 'keydown', 'mousedown'];
+    events.forEach((evt) => {
+      window.addEventListener(evt, handleSynchronousGesture, { capture: true, passive: true });
+      document.addEventListener(evt, handleSynchronousGesture, { capture: true, passive: true });
+    });
 
     return () => {
-      window.removeEventListener('click', handleFirstGesture);
-      window.removeEventListener('touchstart', handleFirstGesture);
-      window.removeEventListener('keydown', handleFirstGesture);
+      unsub();
+      events.forEach((evt) => {
+        window.removeEventListener(evt, handleSynchronousGesture, true);
+        document.removeEventListener(evt, handleSynchronousGesture, true);
+      });
     };
   }, []);
 
@@ -108,16 +108,18 @@ export default function App() {
 
   // Called when user clicks "ESCOLHER NUMEROS" on the first screen
   const handleChooseNumbers = () => {
-    // Ensure music is playing if it was waiting on gesture
-    if (!audioStartedRef.current) {
-      schoolSoundtrack.start();
-      audioStartedRef.current = true;
-    }
+    // Explicitly start audio on this user gesture
+    schoolSoundtrack.setVolume(0.3);
+    schoolSoundtrack.start();
+    audioStartedRef.current = true;
+
     setCurrentScreen('numbers');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handleBackToPoster = () => {
+    // Return to start screen and undo chosen numbers
+    setSelectedNumbers([]);
     setCurrentScreen('poster');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -147,7 +149,29 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-notebook-pattern pb-28 text-slate-800 flex flex-col items-center justify-start p-3 sm:p-5">
+    <div className="min-h-screen bg-notebook-pattern pb-28 text-slate-800 flex flex-col items-center justify-start p-3 sm:p-5 relative">
+      {/* Discreet floating soundtrack toggle in top corner */}
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          schoolSoundtrack.toggle();
+        }}
+        aria-label={isAudioPlaying ? 'Silenciar trilha sonora' : 'Tocar trilha sonora'}
+        title={isAudioPlaying ? 'Silenciar trilha sonora (30%)' : 'Tocar trilha sonora (30%)'}
+        className={`fixed top-3 right-3 z-50 w-9 h-9 rounded-full shadow-md border flex items-center justify-center transition-all cursor-pointer hover:scale-105 active:scale-95 ${
+          isAudioPlaying
+            ? 'bg-white/90 hover:bg-white text-emerald-600 border-slate-200'
+            : 'bg-amber-100 hover:bg-amber-200 text-amber-800 border-amber-300'
+        }`}
+      >
+        {isAudioPlaying ? (
+          <Volume2 className="w-4 h-4 text-emerald-600" />
+        ) : (
+          <VolumeX className="w-4 h-4 text-amber-700" />
+        )}
+      </button>
+
       {/* SCREEN 1: First screen showing only the authentic raffle art */}
       {currentScreen === 'poster' && (
         <main className="w-full max-w-md mx-auto flex flex-col items-center justify-center my-auto">
@@ -158,7 +182,7 @@ export default function App() {
       {/* SCREEN 2: Second screen showing ONLY the 100 number buttons for selection */}
       {currentScreen === 'numbers' && (
         <main className="w-full max-w-3xl mx-auto flex flex-col items-center pt-2">
-          {/* Subtle back navigation button to return to the poster art if desired */}
+          {/* Back button to return to start screen and undo selections */}
           <div className="w-full flex justify-start mb-3 px-2">
             <button
               onClick={handleBackToPoster}
@@ -166,7 +190,7 @@ export default function App() {
               className="px-3.5 py-1.5 rounded-xl bg-white/90 hover:bg-white text-slate-700 hover:text-slate-900 border border-slate-300 shadow-sm text-xs font-semibold flex items-center gap-1.5 cursor-pointer transition-colors"
             >
               <ArrowLeft className="w-3.5 h-3.5" />
-              <span>Ver Arte da Rifa</span>
+              <span>Voltar</span>
             </button>
           </div>
 
