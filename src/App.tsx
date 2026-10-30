@@ -10,7 +10,7 @@ import { NumbersGrid } from './components/NumbersGrid';
 import { StickyFooter } from './components/StickyFooter';
 import { PaymentDialog } from './components/PaymentDialog';
 import { BetSummaryDialog } from './components/BetSummaryDialog';
-import { BetRecord, RAFFLE_CONFIG, BankingReceipt } from './types/raffle';
+import { BetRecord, RAFFLE_CONFIG } from './types/raffle';
 import { schoolSoundtrack } from './utils/audio';
 
 const STORAGE_KEY = 'luna_formatura_rifa_bets_v1';
@@ -129,8 +129,8 @@ export default function App() {
     setIsPaymentOpen(true);
   };
 
-  // Direct confirmation from financial institution (PIX Liquidation)
-  const handlePaymentConfirmedByBank = (name: string, phone: string, receipt: BankingReceipt) => {
+  // Confirmation triggered when sending receipt to raffle owner (or manual confirmation)
+  const handleConfirmPayment = (name: string, phone: string) => {
     const totalAmount = selectedNumbers.length * RAFFLE_CONFIG.pricePerNumber;
     const newBet: BetRecord = {
       id: `bet-${Date.now()}`,
@@ -138,11 +138,10 @@ export default function App() {
       phone,
       numbers: [...selectedNumbers],
       totalAmount,
-      paidAt: receipt.confirmedAt || new Date().toISOString(),
-      banking: receipt,
+      paidAt: new Date().toISOString(),
     };
 
-    // 1. Immediately register paid bet (locking numbers in paidNumbersMap)
+    // 1. Immediately register paid bet (locking numbers in paidNumbersMap with red 'X')
     setBets((prev) => [newBet, ...prev]);
     setLastConfirmedBet(newBet);
 
@@ -152,7 +151,7 @@ export default function App() {
     // 3. Close payment modal
     setIsPaymentOpen(false);
 
-    // 4. Open the official RESUMO DA APOSTA for the apostador!
+    // 4. Open the official RESUMO DA APOSTA for the apostador
     setIsBetSummaryOpen(true);
   };
 
@@ -236,12 +235,12 @@ export default function App() {
         />
       )}
 
-      {/* Payment Dialog with direct Financial Institution integration, PIX, and centered ATENÇÃO warning */}
+      {/* Payment Dialog with PIX, ENVIAR PARA O DONO DA RIFA, and centered ATENÇÃO warning */}
       <PaymentDialog
         isOpen={isPaymentOpen}
         onClose={() => setIsPaymentOpen(false)}
         selectedNumbers={selectedNumbers}
-        onPaymentConfirmedByBank={handlePaymentConfirmedByBank}
+        onConfirmPayment={handleConfirmPayment}
       />
 
       {/* Dedicated RESUMO DA APOSTA for the apostador after financial institution confirmation */}

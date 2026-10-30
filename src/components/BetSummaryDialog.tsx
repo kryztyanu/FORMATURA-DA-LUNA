@@ -145,7 +145,7 @@ export const BetSummaryDialog: React.FC<BetSummaryDialogProps> = ({
 
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-800/70 border border-emerald-400/40 text-[11px] font-bold uppercase tracking-wider text-emerald-200 mb-2">
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-300" />
-            <span>Instituição Financeira: Pagamento Confirmado</span>
+            <span>Participação Registrada • Formatura da Luna</span>
           </div>
 
           <h2 id="bet-summary-title" className="text-2xl sm:text-3xl font-black font-display tracking-tight">
@@ -158,32 +158,32 @@ export const BetSummaryDialog: React.FC<BetSummaryDialogProps> = ({
 
         {/* Receipt Body */}
         <div className="p-5 sm:p-6 space-y-5 max-h-[75vh] overflow-y-auto">
-          {/* Card: Autenticação Bancária */}
+          {/* Card: Status da Participação */}
           <div className="bg-emerald-50/90 border border-emerald-300 rounded-2xl p-4 space-y-2">
             <div className="flex items-center justify-between text-xs">
               <span className="font-extrabold text-emerald-900 uppercase flex items-center gap-1.5">
                 <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                <span>Liquidação Bancária PIX Concluída</span>
+                <span>Participação Confirmada na Rifa</span>
               </span>
               <span className="text-[11px] font-bold bg-emerald-200 text-emerald-900 px-2 py-0.5 rounded-full">
-                Status: LIQUIDADO
+                Status: CONFIRMADO
               </span>
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs pt-1 text-slate-700">
               <div>
-                <span className="text-slate-500 block text-[11px]">Data e Hora da Confirmação:</span>
+                <span className="text-slate-500 block text-[11px]">Data e Hora do Registro:</span>
                 <span className="font-bold text-slate-900">{formattedDate}</span>
               </div>
               <div>
-                <span className="text-slate-500 block text-[11px]">Banco Emissor / Rede:</span>
+                <span className="text-slate-500 block text-[11px]">Chave PIX da Rifa:</span>
                 <span className="font-bold text-slate-900 truncate block">
-                  {bet.banking?.institution || 'Sistema PIX / Banco Central'}
+                  {RAFFLE_CONFIG.pixKey} ({RAFFLE_CONFIG.pixKeyType})
                 </span>
               </div>
               {bet.banking?.endToEndId && (
                 <div className="sm:col-span-2">
-                  <span className="text-slate-500 block text-[11px]">ID da Transação (End-to-End):</span>
+                  <span className="text-slate-500 block text-[11px]">ID da Transação:</span>
                   <span className="font-mono text-[11px] font-semibold text-slate-800 break-all bg-white px-2 py-1 rounded border border-emerald-200 block">
                     {bet.banking.endToEndId}
                   </span>
@@ -192,7 +192,7 @@ export const BetSummaryDialog: React.FC<BetSummaryDialogProps> = ({
               {bet.banking?.authenticationCode && (
                 <div className="sm:col-span-2 flex items-center justify-between bg-white px-2.5 py-1.5 rounded-lg border border-emerald-200">
                   <div>
-                    <span className="text-slate-500 text-[10px] block">Autenticação Bancária:</span>
+                    <span className="text-slate-500 text-[10px] block">Autenticação:</span>
                     <span className="font-mono text-xs font-bold text-emerald-950">
                       {bet.banking.authenticationCode}
                     </span>
@@ -309,13 +309,13 @@ export const BetSummaryDialog: React.FC<BetSummaryDialogProps> = ({
             </div>
           </div>
 
-          {/* Bloco 2: Notificação automática para a Organizadora (71) 99695-3785 */}
+          {/* Bloco 2: Notificação para o Dono da Rifa (71) 99158-1015 */}
           <div className="bg-slate-50 rounded-2xl p-4 border border-slate-200 space-y-2.5">
             <div className="text-[11px] font-bold text-slate-800 uppercase tracking-wider flex items-center justify-between">
-              <span>Notificação para a Organizadora ({RAFFLE_CONFIG.organizerPhoneDisplay}):</span>
+              <span>Notificação para o Dono da Rifa ({RAFFLE_CONFIG.organizerPhoneDisplay}):</span>
             </div>
 
-            <pre className="text-xs font-sans whitespace-pre-wrap text-slate-800 bg-white p-3 rounded-xl border border-slate-200 leading-relaxed">
+            <pre className="text-xs font-sans whitespace-pre-wrap text-slate-800 bg-white p-3 rounded-xl border border-slate-200 leading-relaxed font-semibold">
               {organizerMessage}
             </pre>
 
@@ -327,7 +327,7 @@ export const BetSummaryDialog: React.FC<BetSummaryDialogProps> = ({
                 className="flex-1 py-3 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-2 shadow-md transition-all cursor-pointer"
               >
                 <Share2 className="w-4 h-4 text-emerald-400" />
-                <span>Enviar Notificação para Organizadora</span>
+                <span>Reenviar Notificação para o Dono da Rifa</span>
                 <ExternalLink className="w-3.5 h-3.5 opacity-80" />
               </a>
 

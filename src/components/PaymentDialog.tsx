@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   X,
   Copy,
@@ -7,28 +7,29 @@ import {
   QrCode,
   Smartphone,
   User,
-  ShieldCheck,
-  Loader2,
-  Building2,
-  RefreshCw,
-  Zap,
+  Send,
+  MessageCircle,
 } from 'lucide-react';
-import { RAFFLE_CONFIG, formatCurrencyBRL, formatPhoneMask, BankingReceipt } from '../types/raffle';
+import {
+  RAFFLE_CONFIG,
+  formatCurrencyBRL,
+  formatPhoneMask,
+  buildOrganizerNotificationMessage,
+} from '../types/raffle';
 import { generatePixCopiaECola, generateQrCodeDataUrl } from '../utils/pix';
-import { financialInstitution, PixCharge } from '../services/bankingService';
 
 interface PaymentDialogProps {
   isOpen: boolean;
   onClose: () => void;
   selectedNumbers: string[];
-  onPaymentConfirmedByBank: (name: string, phone: string, receipt: BankingReceipt) => void;
+  onConfirmPayment: (name: string, phone: string) => void;
 }
 
 export const PaymentDialog: React.FC<PaymentDialogProps> = ({
   isOpen,
   onClose,
   selectedNumbers,
-  onPaymentConfirmedByBank,
+  onConfirmPayment,
 }) => {
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -36,8 +37,6 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
   const [copiedPayload, setCopiedPayload] = useState(false);
   const [qrCodeDataUrl, setQrCodeDataUrl] = useState<string>('');
   const [errorMessage, setErrorMessage] = useState('');
-  const [activeCharge, setActiveCharge] = useState<PixCharge | null>(null);
-  const [isCheckingBank, setIsCheckingBank] = useState(false);
 
   const totalAmount = selectedNumbers.length * RAFFLE_CONFIG.pricePerNumber;
   const pixPayload = generatePixCopiaECola(
@@ -47,57 +46,14 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
     'SALVADOR'
   );
 
-  // Initialize or update active PIX charge with financial institution
   useEffect(() => {
     if (isOpen && selectedNumbers.length > 0) {
       generateQrCodeDataUrl(pixPayload).then((dataUrl) => {
         setQrCodeDataUrl(dataUrl);
       });
       setErrorMessage('');
-
-      // Register or update charge with financial institution
-      const charge = financialInstitution.registerCharge({
-        payerName: name || 'Apostador Luna',
-        payerPhone: phone || RAFFLE_CONFIG.pixKey,
-        numbers: selectedNumbers,
-        amount: totalAmount,
-        pixKey: RAFFLE_CONFIG.pixKey,
-        pixCopiaECola: pixPayload,
-      });
-
-      setActiveCharge(charge);
     }
   }, [isOpen, selectedNumbers, totalAmount, pixPayload]);
-
-  // Subscribe to real-time status updates from the financial institution
-  useEffect(() => {
-    if (!isOpen || !activeCharge) return;
-
-    const unsubscribe = financialInstitution.subscribe(activeCharge.transactionId, (charge) => {
-      setActiveCharge(charge);
-
-      if (charge.status === 'CONFIRMED' && charge.confirmedAt) {
-        // Confirmation received directly from the financial institution!
-        const cleanName = name.trim() || charge.payerName || 'Apostador Formatura';
-        const cleanPhone = phone.trim() || charge.payerPhone || '(71) 99695-3785';
-
-        const receipt: BankingReceipt = {
-          institution: charge.financialInstitution,
-          transactionId: charge.transactionId,
-          endToEndId: charge.endToEndId,
-          authenticationCode: charge.authenticationCode || financialInstitution.generateAuthCode(),
-          confirmedAt: charge.confirmedAt,
-        };
-
-        // Notify parent: numbers are immediately locked and Resumo da Aposta is displayed
-        onPaymentConfirmedByBank(cleanName, cleanPhone, receipt);
-      }
-    });
-
-    return () => {
-      unsubscribe();
-    };
-  }, [isOpen, activeCharge, name, phone, onPaymentConfirmedByBank]);
 
   if (!isOpen) return null;
 
@@ -124,33 +80,44 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
     if (errorMessage) setErrorMessage('');
   };
 
-  // Direct check with banking gateway
-  const handleCheckBankingGateway = () => {
-    if (!activeCharge) return;
-    setIsCheckingBank(true);
-    setTimeout(() => {
-      setIsCheckingBank(false);
-    }, 1200);
-  };
-
-  // Direct trigger for simulating financial institution liquidation (for testing without real money transfer)
-  const handleSimulateBankConfirmation = () => {
+  /**
+   * Action for "ENVIAR PARA O DONO DA RIFA"
+   * Emits summary to WhatsApp (71) 99158-1015 containing:
+   * - Nome do Apostador
+   * - Whatspp do Apostador
+   * - Números escolhidos
+   * - Valor Pago
+   * And marks the numbers as paid/locked with "X" in the app.
+   */
+  const handleSendToOwner = () => {
     const cleanName = name.trim();
     const cleanDigits = phone.replace(/\D/g, '');
 
     if (!cleanName) {
-      setErrorMessage('Por favor, preencha seu NOME para registrar a aposta bancária.');
+      setErrorMessage('Por favor, informe seu NOME antes de enviar.');
       return;
     }
     if (cleanDigits.length < 10) {
-      setErrorMessage('Por favor, preencha seu WHATSAPP com DDD.');
+      setErrorMessage('Por favor, informe seu WHATSAPP com DDD.');
       return;
     }
 
-    if (activeCharge) {
-      // Simulate real-time bank webhook/liquidation push
-      financialInstitution.confirmPayment(activeCharge.transactionId);
-    }
+    // Build the official summary message for the raffle owner
+    const message = buildOrganizerNotificationMessage(
+      cleanName,
+      phone,
+      selectedNumbers,
+      totalAmount
+    );
+
+    // Direct WhatsApp URL to the owner: (71) 99158-1015 (5571991581015)
+    const waUrl = `https://wa.me/${RAFFLE_CONFIG.organizerPhone}?text=${encodeURIComponent(message)}`;
+
+    // Open WhatsApp in a new tab/window
+    window.open(waUrl, '_blank', 'noopener,noreferrer');
+
+    // Confirm payment and register bet in the app so numbers are marked with 'X'
+    onConfirmPayment(cleanName, phone);
   };
 
   return (
@@ -161,16 +128,15 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
         aria-labelledby="payment-dialog-title"
         className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl border-2 border-emerald-400 overflow-hidden my-6"
       >
-        {/* Header */}
+        {/* Header - Notice: removed 'integraçao bancaria...' at top per user specification */}
         <div className="bg-gradient-to-r from-emerald-700 via-emerald-600 to-green-700 p-5 text-white flex items-center justify-between">
           <div>
-            <div className="inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wider text-emerald-200">
-              <Building2 className="w-3.5 h-3.5 text-emerald-300" />
-              <span>Integração Bancária PIX • Formatura da Luna</span>
-            </div>
             <h3 id="payment-dialog-title" className="text-xl sm:text-2xl font-extrabold font-display">
-              Chave PIX e Pagamento Bancário
+              Chave PIX e Pagamento
             </h3>
+            <p className="text-xs text-emerald-100 font-medium mt-0.5">
+              Rifa Formatura da Luna • R$ 10,00 por número
+            </p>
           </div>
           <button
             onClick={onClose}
@@ -183,7 +149,7 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
         </div>
 
         {/* Content Body */}
-        <div className="p-5 sm:p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+        <div className="p-5 sm:p-6 space-y-4 max-h-[82vh] overflow-y-auto">
           {/* Summary of chosen numbers */}
           <div className="bg-emerald-50/80 rounded-2xl p-4 border border-emerald-200 flex items-center justify-between gap-3">
             <div>
@@ -249,6 +215,20 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
                 {errorMessage}
               </div>
             )}
+
+            {/* BOTÃO EXATO SOLICITADO PELO USUÁRIO: "ENVIAR PARA O DONO DA RIFA" */}
+            <button
+              type="button"
+              onClick={handleSendToOwner}
+              className="w-full py-3.5 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-black text-sm sm:text-base flex items-center justify-center gap-2 shadow-lg shadow-emerald-700/25 transition-all cursor-pointer hover:scale-[1.01] active:scale-[0.99] uppercase tracking-wide"
+            >
+              <MessageCircle className="w-5 h-5 fill-current" />
+              <span>ENVIAR PARA O DONO DA RIFA</span>
+              <Send className="w-4 h-4" />
+            </button>
+            <div className="text-[11px] text-center text-slate-500 font-medium">
+              Envia o comprovante para o WhatsApp do Dono: <strong className="text-slate-700 font-semibold">{RAFFLE_CONFIG.organizerPhoneDisplay}</strong>
+            </div>
           </div>
 
           {/* PIX Key Section: EXACT REQUIREMENT 71996953785 with copy option */}
@@ -304,7 +284,7 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
                 <div className="text-xs text-slate-600 space-y-1.5 text-center sm:text-left">
                   <div className="font-semibold text-slate-800">Pague no seu app bancário:</div>
                   <p className="text-[11px] text-slate-500">
-                    Abra o app do seu banco, escolha PIX e use a chave ou o código Copia e Cola. O sistema detectará a liquidação bancária automaticamente.
+                    Abra o app do seu banco, escolha PIX e utilize a chave acima ou o código Copia e Cola.
                   </p>
                   <button
                     type="button"
@@ -317,61 +297,6 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
                 </div>
               </div>
             )}
-          </div>
-
-          {/* REAL-TIME FINANCIAL INSTITUTION STATUS LISTENER (Replaces manual button) */}
-          <div className="bg-slate-900 text-white p-4 rounded-2xl border border-slate-800 shadow-md space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <div className="relative flex h-3 w-3">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
-                </div>
-                <span className="text-xs font-bold text-emerald-400 uppercase tracking-wide">
-                  Conexão Direta com a Instituição Financeira
-                </span>
-              </div>
-              <span className="text-[10px] font-mono text-slate-400">SPI / BACEN</span>
-            </div>
-
-            <div className="bg-slate-800/80 rounded-xl p-3 border border-slate-700/80 space-y-2">
-              <div className="flex items-center gap-2.5 text-xs text-slate-300">
-                <Loader2 className="w-4 h-4 text-emerald-400 animate-spin shrink-0" />
-                <span className="leading-snug">
-                  Aguardando liquidação bancária... Assim que a instituição financeira confirmar, os números serão bloqueados com "X" e o <strong>Resumo da Aposta</strong> abrirá automaticamente.
-                </span>
-              </div>
-
-              {activeCharge && (
-                <div className="text-[11px] font-mono text-slate-400 pt-1 border-t border-slate-700 flex justify-between items-center">
-                  <span>ID Transação:</span>
-                  <span className="text-slate-300 font-semibold">{activeCharge.transactionId}</span>
-                </div>
-              )}
-            </div>
-
-            {/* Direct Verification and Bank Simulation triggers */}
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-2 pt-1">
-              <button
-                type="button"
-                onClick={handleCheckBankingGateway}
-                disabled={isCheckingBank}
-                className="w-full sm:w-auto text-[11px] text-slate-300 hover:text-white flex items-center justify-center gap-1.5 py-1.5 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 transition-colors cursor-pointer border border-slate-700"
-              >
-                <RefreshCw className={`w-3.5 h-3.5 ${isCheckingBank ? 'animate-spin text-emerald-400' : ''}`} />
-                <span>{isCheckingBank ? 'Consultando banco...' : 'Consultar Liquidação no Banco'}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={handleSimulateBankConfirmation}
-                className="w-full sm:w-auto text-[11px] font-bold text-emerald-300 hover:text-emerald-200 bg-emerald-950/80 hover:bg-emerald-900 border border-emerald-500/50 py-1.5 px-3 rounded-lg flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
-                title="Simula a resposta instantânea da instituição financeira"
-              >
-                <Zap className="w-3.5 h-3.5 text-amber-400" />
-                <span>Confirmar Recebimento Bancário (Simulação)</span>
-              </button>
-            </div>
           </div>
 
           {/* EXACT HIGHLIGHTED WARNING MESSAGE REQUIRED BY USER - CENTERED */}
@@ -388,7 +313,7 @@ export const PaymentDialog: React.FC<PaymentDialogProps> = ({
           </div>
 
           {/* Botão voltar centralizado (conforme especificado pelo usuário) */}
-          <div className="flex justify-center pt-2">
+          <div className="flex justify-center pt-1">
             <button
               type="button"
               onClick={onClose}

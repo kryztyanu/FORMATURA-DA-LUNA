@@ -24,8 +24,8 @@ export const RAFFLE_CONFIG = {
   pixKey: '71996953785',
   pixKeyType: 'Telefone (Celular)',
   pixRecipient: 'Luna / Responsável (Formatura da Luna)',
-  organizerPhone: '5571996953785',
-  organizerPhoneDisplay: '(71) 99695-3785',
+  organizerPhone: '5571991581015',
+  organizerPhoneDisplay: '(71) 99158-1015',
   pricePerNumber: 10.00,
   totalNumbers: 100, // 00 to 99
   artDimensions: {
@@ -112,8 +112,9 @@ export function buildOrganizerNotificationMessage(
   totalAmount: number
 ): string {
   const sortedNumbers = [...numbers].sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
-  return `NOME DO APOSTADOR: ${name}
-WHATSAPP DO APOSTADOR: ${phone}
+  return `FORMATURA DA LUNA - RIFA
+Nome do Apostador: ${name}
+Whatspp do Apostador: ${phone}
 Números escolhidos: ${sortedNumbers.join(', ')}
 Valor Pago: ${formatCurrencyBRL(totalAmount)}`;
 }
